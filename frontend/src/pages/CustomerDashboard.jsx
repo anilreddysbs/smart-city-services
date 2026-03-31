@@ -99,7 +99,7 @@ function CustomerDashboard() {
                          <button disabled={isProcessing} onClick={() => handleUpdateStatus(b.id, 'Cancelled')} className="btn btn-outline" style={{ borderColor: 'var(--danger)', color: 'var(--danger)', padding: '0.5rem 1rem' }}>Cancel</button>
                       )}
                       {b.status === 'Accepted' && (
-                         <button disabled={isProcessing} onClick={() => handleUpdateStatus(b.id, 'Completed')} className="btn" style={{ padding: '0.5rem 1rem' }}>Complete</button>
+                         <span style={{ fontSize: '0.85rem', color: 'var(--text-light)', fontStyle: 'italic' }}>Service in progress</span>
                       )}
                     </div>
                   </div>
