@@ -104,6 +104,7 @@ function WorkerDashboard() {
                            Due: {new Date(job.due_by).toLocaleString()}
                          </span>
                        )}
+                       <span style={{ color: 'var(--primary)', fontWeight: '800' }}>₹{job.total_price}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -157,6 +158,7 @@ function WorkerDashboard() {
                            Due: {new Date(job.due_by).toLocaleString()}
                          </span>
                        )}
+                       <span style={{ color: 'var(--primary)', fontWeight: '800' }}>₹{job.total_price}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
