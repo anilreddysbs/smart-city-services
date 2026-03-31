@@ -49,8 +49,16 @@ function WorkerListing() {
     <div style={{ background: 'var(--background-alt)', minHeight: '100vh' }}>
       
       {/* Search/Filter Bar */}
-      <div style={{ background: 'white', padding: '1.5rem 0', borderBottom: '1px solid var(--border)', position: 'sticky', top: '72px', zIndex: 900 }}>
-        <div className="container" style={{ padding: '0 2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+      <div style={{ 
+        background: 'rgba(255, 255, 255, 0.9)', 
+        backdropFilter: 'blur(10px)',
+        padding: '1rem 0', 
+        borderBottom: '1px solid var(--border)', 
+        position: 'sticky', 
+        top: '72px', 
+        zIndex: 950 
+      }}>
+        <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', flex: 2, minWidth: '300px' }}>
             <FaSearch style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
             <input 
@@ -58,11 +66,11 @@ function WorkerListing() {
               placeholder="Job title, keywords, or company" 
               value={search} 
               onChange={(e) => setSearch(e.target.value)}
-              style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.8rem', border: '1px solid var(--border)', borderRadius: '4px', fontSize: '1rem' }}
+              style={{ width: '100%', padding: '0.75rem 1rem 0.75rem 2.8rem', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '0.95rem' }}
             />
           </div>
           
-          <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--border)', borderRadius: '4px', minWidth: '150px', fontWeight: 'bold' }}>
+          <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--border)', borderRadius: '8px', minWidth: '150px', fontWeight: 'bold', fontSize: '0.9rem' }}>
             <option value="">All Services</option>
             <option value="Electrician">Electrician</option>
             <option value="Plumber">Plumber</option>
@@ -70,30 +78,32 @@ function WorkerListing() {
             <option value="Maintenance Worker">Maintenance</option>
           </select>
 
-          <select value={minRating} onChange={(e) => setMinRating(e.target.value)} style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--border)', borderRadius: '4px', minWidth: '150px' }}>
+          <select value={minRating} onChange={(e) => setMinRating(e.target.value)} style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--border)', borderRadius: '8px', minWidth: '150px', fontSize: '0.9rem' }}>
             <option value="">Any Rating</option>
             <option value="4.5">4.5+ Stars</option>
             <option value="4.0">4.0+ Stars</option>
           </select>
 
-          <button className="btn" style={{ padding: '0.75rem 2.5rem', borderRadius: '4px' }}>Find Jobs</button>
+          <button className="btn" style={{ padding: '0.75rem 2rem', borderRadius: '8px', fontSize: '0.9rem' }}>Update Search</button>
         </div>
       </div>
 
-      <div className="container">
-        <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div className="container" style={{ paddingTop: '2rem' }}>
+        <div style={{ marginBottom: '3rem', borderBottom: '1px solid var(--border-light)', paddingBottom: '2rem' }}>
            <div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: '900', color: 'var(--text)' }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: '900', color: 'var(--text)', letterSpacing: '-0.02em' }}>
                 {search || filter ? `Results for "${search || filter}"` : 'Top Professionals in your area'}
               </h1>
-              <p style={{ color: 'var(--text-light)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
-                Showing verified workers based on geographic proximity and performance metrics.
+              <p style={{ color: 'var(--text-light)', fontSize: '1rem', marginTop: '0.5rem' }}>
+                Verified experts matched by geographic proximity and performance metrics.
               </p>
            </div>
            {(filter || search || minRating) && (
-             <button onClick={handleReset} style={{ background: 'none', border: 'none', color: 'var(--secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '0.9rem' }}>
-               Clear all filters
-             </button>
+             <div style={{ marginTop: '1.5rem' }}>
+               <button onClick={handleReset} style={{ background: 'var(--primary-light)', border: 'none', color: 'var(--primary)', fontWeight: '800', cursor: 'pointer', fontSize: '0.8rem', padding: '0.5rem 1rem', borderRadius: '4px' }}>
+                 Reset all filters
+               </button>
+             </div>
            )}
         </div>
 

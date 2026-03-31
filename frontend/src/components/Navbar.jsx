@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaUserCircle, FaSignOutAlt, FaRocket, FaSearch } from 'react-icons/fa';
+import { FaUserCircle, FaSignOutAlt, FaCity, FaSearch, FaBriefcase, FaGlobeAmericas } from 'react-icons/fa';
 
 function Navbar() {
   const navigate = useNavigate();
@@ -18,39 +18,75 @@ function Navbar() {
   return (
     <nav className="navbar">
       <Link to="/" className="navbar-brand">
-         <div style={{ background: 'var(--primary)', color: 'white', padding: '0.4rem 0.6rem', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '0.4rem' }}>
-          G
+         <div style={{ 
+           background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%)', 
+           color: 'white', 
+           width: '38px', 
+           height: '38px', 
+           borderRadius: '10px', 
+           display: 'flex', 
+           alignItems: 'center', 
+           justifyContent: 'center', 
+           marginRight: '0.75rem',
+           boxShadow: '0 4px 12px rgba(0, 162, 100, 0.25)'
+         }}>
+          <FaCity size={20} />
         </div>
-        <span style={{ color: '#202020', letterSpacing: '-0.02em', fontSize: '1.4rem' }}>SmartCity</span>
+        <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+           <span style={{ color: 'var(--text)', letterSpacing: '-0.03em', fontSize: '1.25rem', fontWeight: '900' }}>SmartCity</span>
+           <span style={{ color: 'var(--primary)', fontSize: '0.65rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: '2px' }}>Services</span>
+        </div>
       </Link>
       <div className="navbar-links">
-        <Link to="/workers" style={{ color: isActive('/workers') ? 'var(--primary)' : 'var(--text-muted)' }}>
+        <Link to="/workers" style={{ 
+          color: isActive('/workers') ? 'var(--primary)' : 'var(--text-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.4rem'
+        }}>
           Professionals
         </Link>
         <Link to="/" style={{ color: isActive('/') ? 'var(--primary)' : 'var(--text-muted)' }}>
           Community
         </Link>
         
-        <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 0.5rem' }}></div>
+        <div style={{ width: '1px', height: '24px', background: 'var(--border-light)', margin: '0 0.5rem' }}></div>
 
         {user ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-            <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text)', fontWeight: '700' }}>
-              <FaUserCircle size={22} color="var(--primary)" />
+            <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text)', fontWeight: '800', fontSize: '0.9rem' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--primary-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                 <FaUserCircle size={18} color="var(--primary)" />
+              </div>
               <span>{user?.name?.split(' ')[0]}</span>
             </Link>
             <button 
               onClick={handleLogout} 
-              style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '99px', padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-light)' }}
+              style={{ 
+                background: 'var(--background-alt)', 
+                border: '1px solid var(--border)', 
+                borderRadius: '8px', 
+                padding: '0.5rem 1rem', 
+                fontSize: '0.8rem', 
+                fontWeight: '700', 
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                color: 'var(--text-light)',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border-light)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'var(--background-alt)'}
             >
-              Sign Out
+              <FaSignOutAlt size={12} /> Sign Out
             </button>
           </div>
         ) : (
-          <>
-            <Link to="/login" style={{ fontWeight: '700', color: 'var(--text-muted)', fontSize: '0.95rem' }}>Sign In</Link>
-            <Link to="/register" className="btn" style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', borderRadius: '4px' }}>Join Now</Link>
-          </>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <Link to="/login" style={{ fontWeight: '800', color: 'var(--text)', fontSize: '0.9rem' }}>Sign In</Link>
+            <Link to="/register" className="btn" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: '8px' }}>Join Now</Link>
+          </div>
         )}
       </div>
     </nav>
