@@ -12,7 +12,6 @@ function Booking() {
   const [form, setForm] = useState({
     description: '',
     start_time: '',
-    end_time: '',
     priority: 'Normal',
     customer_location: '',
     customer_latitude: null,
@@ -30,10 +29,8 @@ function Booking() {
   };
 
   const calculateTotal = () => {
-    if (!form.start_time || !form.end_time) return 0;
-    const start = new Date(form.start_time);
-    const end = new Date(form.end_time);
-    const durationHours = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
+    if (!form.start_time) return 0;
+    const durationHours = 1;
     const category = worker?.category || selectedCategory;
     const rate = serviceRates[category] || 0;
     const emergencyFee = form.priority === 'Emergency' ? 600 : 0;
@@ -52,7 +49,6 @@ function Booking() {
         requested_category: worker?.category || selectedCategory,
         description: form.description,
         start_time: form.start_time,
-        end_time: form.end_time,
         priority: form.priority,
         customer_location: form.customer_location,
         customer_latitude: form.customer_latitude,
@@ -157,10 +153,6 @@ function Booking() {
               <label>Expected Start Time</label>
               <input type="datetime-local" value={form.start_time} onChange={e=>setForm({...form, start_time: e.target.value})} style={{ padding: '0.75rem', fontSize: '1rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
             </div>
-            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-              <label>Expected End Time</label>
-              <input type="datetime-local" value={form.end_time} onChange={e=>setForm({...form, end_time: e.target.value})} style={{ padding: '0.75rem', fontSize: '1rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
-            </div>
             <div className="form-group">
               <label>Priority</label>
               <select value={form.priority} onChange={(e)=>setForm({...form, priority: e.target.value})} style={{ padding: '0.75rem', fontSize: '1rem', border: '1px solid var(--border)', borderRadius: '4px' }}>
@@ -219,7 +211,6 @@ function Booking() {
             <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '8px', textAlign: 'left', marginBottom: '2.5rem', border: '1px solid var(--border)' }}>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Service Category:</strong> {worker?.category || selectedCategory}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Start Time:</strong> {new Date(form.start_time).toLocaleString()}</p>
-               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>End Time:</strong> {new Date(form.end_time).toLocaleString()}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Priority:</strong> {form.priority}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Location:</strong> {form.customer_location}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Est. Total Cost:</strong> <strong style={{ color: 'var(--primary)', fontSize: '1.2rem' }}>₹{calculateTotal()}</strong></p>
