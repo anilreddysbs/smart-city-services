@@ -56,9 +56,14 @@ export const createBooking = async (req, res) => {
     }
 
     let computedServiceId = service_id;
-    if (!computedServiceId) {
-      const serviceRes = await client.query('SELECT id FROM services WHERE service_name = $1 LIMIT 1', [requested_category]);
-      computedServiceId = serviceRes.rows[0]?.id || 1;
+    let hourlyRate = 0;
+    
+    const serviceRes = await client.query('SELECT id, hourly_rate FROM services WHERE id = $1 OR service_name = $2 LIMIT 1', [computedServiceId, requested_category]);
+    if (serviceRes.rows.length > 0) {
+      computedServiceId = serviceRes.rows[0].id;
+      hourlyRate = parseFloat(serviceRes.rows[0].hourly_rate || 0);
+    } else {
+      computedServiceId = 1;
     }
 
     const priorityNormalized = priority === 'Emergency' ? 'Emergency' : 'Normal';
@@ -67,13 +72,16 @@ export const createBooking = async (req, res) => {
       ? new Date(new Date(start).setHours(23, 59, 59, 999))
       : end;
 
+    const durationHours = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
+    const totalPrice = (hourlyRate * durationHours) + emergencyFee;
+
     const result = await client.query(
       `INSERT INTO Bookings (
         customer_id, worker_id, service_id, requested_category, description,
-        start_time, end_time, due_by, priority, priority_fee, status, booking_date,
+        start_time, end_time, due_by, priority, priority_fee, total_price, status, booking_date,
         customer_location, customer_latitude, customer_longitude
       )
-      VALUES ($1, $13, $2, $3, $4, $5, $6, $7, $8, $9, 'Pending', NOW(), $10, $11, $12)
+      VALUES ($1, $13, $2, $3, $4, $5, $6, $7, $8, $9, $14, 'Pending', NOW(), $10, $11, $12)
       RETURNING *`,
       [
         executing_customer_id,
@@ -88,7 +96,8 @@ export const createBooking = async (req, res) => {
         customer_location,
         customer_latitude,
         customer_longitude,
-        worker_id
+        worker_id,
+        totalPrice
       ]
     );
 
@@ -284,12 +293,23 @@ export const updateBookingStatus = async (req, res) => {
       const booking = bookingRes.rows[0];
 
       if (booking) {
+        // Record job history
         await client.query(`
           INSERT INTO job_history (worker_id, booking_id, service_type)
           VALUES ($1, $2, $3)
           ON CONFLICT DO NOTHING
         `, [booking.worker_id, id, booking.service_type]);
 
+        // Mock Payment Processing
+        const paymentRes = await client.query(`
+          INSERT INTO payments (booking_id, customer_id, worker_id, amount, status)
+          VALUES ($1, $2, $3, $4, 'Completed')
+          RETURNING transaction_id
+        `, [id, bookingQuery.rows[0].customer_id, booking.worker_id, bookingQuery.rows[0].total_price]);
+
+        const transId = paymentRes.rows[0].transaction_id;
+
+        // Add trust score and stats update
         const totalAcceptedRes = await client.query(`SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status != 'Pending'`, [booking.worker_id]);
         const totalCompletedRes = await client.query(`SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status = 'Completed'`, [booking.worker_id]);
         

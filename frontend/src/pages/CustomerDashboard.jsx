@@ -25,6 +25,9 @@ function CustomerDashboard() {
     try {
       await api.put(`/bookings/${id}/status`, { status });
       queryClient.invalidateQueries(['customerBookings']);
+      if (status === 'Completed') {
+        toast.info('Mock Payment: ₹ Transaction successful! Funds transferred to worker.');
+      }
       toast.success(`Service ${status.toLowerCase()} successfully.`);
     } catch (err) {
       toast.error('Failed to update service status.');
@@ -83,6 +86,7 @@ function CustomerDashboard() {
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>
                          Scheduled for: <strong>{new Date(b.start_time).toLocaleDateString()}</strong>
                       </div>
+                      <div style={{ fontWeight: '800', color: 'var(--primary)', marginTop: '0.25rem' }}>₹{b.total_price}</div>
                       {b.priority === 'Emergency' && (
                         <div style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: '800', marginTop: '0.35rem' }}>
                           Emergency request (higher pricing)

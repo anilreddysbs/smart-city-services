@@ -20,7 +20,24 @@ function Booking() {
   });
   const [geoStatus, setGeoStatus] = useState('idle');
 
-  const [selectedCategory, setSelectedCategory] = useState('Electrician');
+  const serviceRates = {
+    'Electrician': 200,
+    'Plumber': 150,
+    'Painter': 150,
+    'Construction Worker': 100,
+    'Maintenance Worker': 100
+  };
+
+  const calculateTotal = () => {
+    if (!form.start_time || !form.end_time) return 0;
+    const start = new Date(form.start_time);
+    const end = new Date(form.end_time);
+    const durationHours = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
+    const category = worker?.category || selectedCategory;
+    const rate = serviceRates[category] || 0;
+    const emergencyFee = form.priority === 'Emergency' ? 500 : 0;
+    return (rate * durationHours) + emergencyFee;
+  };
 
   const { data: worker, isLoading } = useQuery({
     queryKey: ['worker', workerId],
@@ -204,7 +221,7 @@ function Booking() {
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>End Time:</strong> {new Date(form.end_time).toLocaleString()}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Priority:</strong> {form.priority}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Location:</strong> {form.customer_location}</p>
-               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Est. Total Cost:</strong> {form.priority === 'Emergency' ? 'Higher (Emergency surcharge applies)' : 'Standard pricing'}</p>
+               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Est. Total Cost:</strong> <strong style={{ color: 'var(--primary)', fontSize: '1.2rem' }}>₹{calculateTotal()}</strong></p>
                <p style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'flex-start' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block', flexShrink: 0 }}>Job Description:</strong> <span>{form.description}</span></p>
             </div>
 
