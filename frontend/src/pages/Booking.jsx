@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { FaCalendarAlt, FaClipboardList, FaCheckCircle, FaArrowRight, FaArrowLeft } from 'react-icons/fa';
+import { FaCalendarAlt, FaClipboardList, FaCheckCircle, FaArrowRight, FaArrowLeft, FaMapMarkerAlt, FaSpinner } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import api from '../services/api';
 
@@ -9,7 +9,16 @@ function Booking() {
   const { workerId } = useParams();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ description: '', start_time: '', end_time: '' });
+  const [form, setForm] = useState({
+    description: '',
+    start_time: '',
+    end_time: '',
+    priority: 'Normal',
+    customer_location: '',
+    customer_latitude: null,
+    customer_longitude: null
+  });
+  const [geoStatus, setGeoStatus] = useState('idle');
 
   const { data: worker, isLoading } = useQuery({
     queryKey: ['worker', workerId],
@@ -17,16 +26,18 @@ function Booking() {
   });
 
   const handleSubmit = async () => {
-    const user = JSON.parse(localStorage.getItem('user'));
     try {
-      await api.post('/bookings', {
-        customer_id: user.customerId || user.id,
-        worker_id: workerId,
+      const result = await api.post('/bookings', {
+        requested_category: worker?.category || 'Electrician',
         description: form.description,
         start_time: form.start_time,
-        end_time: form.end_time
+        end_time: form.end_time,
+        priority: form.priority,
+        customer_location: form.customer_location,
+        customer_latitude: form.customer_latitude,
+        customer_longitude: form.customer_longitude
       });
-      toast.success('Your service logic has been securely locked and successfully booked!');
+      toast.success(`Request sent to ${result.data?.alerted_workers || 0} workers. First accepter gets assigned.`);
       navigate('/dashboard/customer');
     } catch (err) {
       if (err.response?.status === 409) {
@@ -36,6 +47,42 @@ function Booking() {
       }
     }
   };
+  
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setGeoStatus('error');
+      return;
+    }
+    setGeoStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          const city =
+            data.address?.city ||
+            data.address?.town ||
+            data.address?.village ||
+            data.address?.county ||
+            data.address?.state ||
+            'Unknown Location';
+          const state = data.address?.state || '';
+          const locationLabel = state ? `${city}, ${state}` : city;
+          setForm(prev => ({ ...prev, customer_location: locationLabel, customer_latitude: latitude, customer_longitude: longitude }));
+          setGeoStatus('success');
+        } catch {
+          setForm(prev => ({ ...prev, customer_location: prev.customer_location || 'My Location', customer_latitude: latitude, customer_longitude: longitude }));
+          setGeoStatus('success');
+        }
+      },
+      () => setGeoStatus('error'),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
 
   if (isLoading) return <div className="container" style={{ textAlign: 'center', padding: '4rem', fontSize: '1.25rem', color: 'var(--text-light)' }}>Pulling intelligence ledgers...</div>;
 
@@ -43,7 +90,10 @@ function Booking() {
     <div className="container" style={{ maxWidth: '700px' }}>
       <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
         <h1 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Book a Professional</h1>
-        <p style={{ color: 'var(--text-light)' }}>Securely booking <strong style={{ color: 'var(--text)' }}>{worker?.name}</strong> • {worker?.category}</p>
+        <p style={{ color: 'var(--text-light)' }}>
+          Raising a <strong style={{ color: 'var(--text)' }}>{worker?.category}</strong> request.
+          All matching workers will be alerted and first accepter gets assigned.
+        </p>
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2.5rem', padding: '0 2rem' }}>
@@ -75,6 +125,18 @@ function Booking() {
               <label>Expected End Time</label>
               <input type="datetime-local" value={form.end_time} onChange={e=>setForm({...form, end_time: e.target.value})} style={{ padding: '0.75rem', fontSize: '1rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
             </div>
+            <div className="form-group">
+              <label>Priority</label>
+              <select value={form.priority} onChange={(e)=>setForm({...form, priority: e.target.value})} style={{ padding: '0.75rem', fontSize: '1rem', border: '1px solid var(--border)', borderRadius: '4px' }}>
+                <option value="Normal">Normal</option>
+                <option value="Emergency">Emergency (higher cost, attend by EOD)</option>
+              </select>
+            </div>
+            {form.priority === 'Emergency' && (
+              <p style={{ fontSize: '0.85rem', color: 'var(--danger)', fontWeight: '700', marginTop: '0.75rem' }}>
+                Emergency jobs include priority handling and additional fee.
+              </p>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2.5rem' }}>
               <button disabled={!form.start_time || !form.end_time} className="btn" onClick={() => setStep(2)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Confirm Time <FaArrowRight /></button>
             </div>
@@ -88,9 +150,26 @@ function Booking() {
               <label>Job Description</label>
               <textarea rows="5" placeholder="Provide a brief summary of the exact service you need..." value={form.description} onChange={e=>setForm({...form, description: e.target.value})} style={{ padding: '1rem', fontSize: '1rem', border: '1px solid var(--border)', borderRadius: '4px' }}></textarea>
             </div>
+            <div className="form-group" style={{ marginTop: '1rem' }}>
+              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>Service Location</span>
+                <button type="button" onClick={handleDetectLocation} disabled={geoStatus === 'loading'} style={{ background: 'var(--background-alt)', border: '1px solid var(--border)', borderRadius: '6px', padding: '0.3rem 0.7rem', fontSize: '0.75rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  {geoStatus === 'loading' ? <FaSpinner style={{ animation: 'spin 1s linear infinite' }} /> : <FaMapMarkerAlt />}
+                  {geoStatus === 'loading' ? 'Detecting...' : 'Detect My Location'}
+                </button>
+              </label>
+              <input
+                type="text"
+                value={form.customer_location}
+                onChange={(e)=>setForm({...form, customer_location: e.target.value})}
+                placeholder="Street / Area / City"
+                style={{ marginTop: '0.5rem', padding: '0.75rem', fontSize: '1rem', border: '1px solid var(--border)', borderRadius: '4px', width: '100%' }}
+                required
+              />
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2.5rem' }}>
               <button className="btn btn-secondary" onClick={() => setStep(1)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><FaArrowLeft /> Back</button>
-              <button disabled={!form.description} className="btn" onClick={() => setStep(3)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Continue to Review <FaArrowRight /></button>
+              <button disabled={!form.description || !form.customer_location} className="btn" onClick={() => setStep(3)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Continue to Review <FaArrowRight /></button>
             </div>
           </div>
         )}
@@ -102,10 +181,12 @@ function Booking() {
             <p style={{ color: '#64748b', marginBottom: '2rem' }}>Please verify your service parameters directly before confirming.</p>
             
             <div style={{ background: '#f8fafc', padding: '1.5rem', borderRadius: '8px', textAlign: 'left', marginBottom: '2.5rem', border: '1px solid var(--border)' }}>
-               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Service Provider:</strong> {worker?.name} ({worker?.category})</p>
+               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Service Category:</strong> {worker?.category}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Start Time:</strong> {new Date(form.start_time).toLocaleString()}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>End Time:</strong> {new Date(form.end_time).toLocaleString()}</p>
-               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Est. Total Cost:</strong> TBD - Awaiting Professional Final Estimate</p>
+               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Priority:</strong> {form.priority}</p>
+               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Location:</strong> {form.customer_location}</p>
+               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Est. Total Cost:</strong> {form.priority === 'Emergency' ? 'Higher (Emergency surcharge applies)' : 'Standard pricing'}</p>
                <p style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'flex-start' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block', flexShrink: 0 }}>Job Description:</strong> <span>{form.description}</span></p>
             </div>
 

@@ -78,11 +78,16 @@ function CustomerDashboard() {
                 {activeBookings.map(b => (
                   <div key={b.id} className="card" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <div style={{ fontWeight: '800', fontSize: '1.1rem', color: 'var(--text)' }}>{b.worker_name}</div>
+                      <div style={{ fontWeight: '800', fontSize: '1.1rem', color: 'var(--text)' }}>{b.worker_name || 'Awaiting assignment'}</div>
                       <div style={{ color: 'var(--secondary)', fontWeight: '700', fontSize: '0.85rem', textTransform: 'uppercase', marginBottom: '0.5rem' }}>{b.category}</div>
                       <div style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>
                          Scheduled for: <strong>{new Date(b.start_time).toLocaleDateString()}</strong>
                       </div>
+                      {b.priority === 'Emergency' && (
+                        <div style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: '800', marginTop: '0.35rem' }}>
+                          Emergency request (higher pricing)
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                       <span className={`badge ${b.status.toLowerCase()}`}>{b.status}</span>

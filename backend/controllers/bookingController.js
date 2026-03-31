@@ -1,7 +1,17 @@
 import pool from '../database.js';
 
 export const createBooking = async (req, res) => {
-  const { worker_id, service_id, description, start_time, end_time } = req.body;
+  const {
+    service_id,
+    requested_category,
+    description,
+    start_time,
+    end_time,
+    priority = 'Normal',
+    customer_location = '',
+    customer_latitude = null,
+    customer_longitude = null
+  } = req.body;
   const client = await pool.connect();
 
   try {
@@ -23,29 +33,10 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ success: false, error: 'End time boundary must dynamically exceed start time interval.' });
     }
 
-    // Isolate targeting row-level bounds via "FOR UPDATE" explicit execution
-    const workerCheck = await client.query('SELECT id, user_id FROM Workers WHERE id = $1 FOR UPDATE', [worker_id]);
-    if (workerCheck.rows.length === 0) {
+    const categories = ['Electrician', 'Plumber', 'Painter', 'Construction Worker', 'Maintenance Worker'];
+    if (!requested_category || !categories.includes(requested_category)) {
       await client.query('ROLLBACK');
-      return res.status(404).json({ success: false, error: 'Target Worker context absent block failed.' });
-    }
-    if (workerCheck.rows[0].user_id === req.user.id) {
-      await client.query('ROLLBACK');
-      return res.status(403).json({ success: false, error: 'Self-booking assignments strictly mathematically rejected.' });
-    }
-
-    // Mathematical Conflict Resolution
-    const conflictCheck = await client.query(`
-      SELECT 1 FROM Bookings
-      WHERE worker_id = $1 
-      AND status IN ('Pending', 'Accepted') 
-      AND is_deleted = false
-      AND (start_time < $3 AND end_time > $2)
-    `, [worker_id, start, end]);
-
-    if (conflictCheck.rows.length > 0) {
-      await client.query('ROLLBACK');
-      return res.status(409).json({ success: false, error: 'Time slot overlaps directly intersecting existing locked logic block.' });
+      return res.status(400).json({ success: false, error: 'Requested category is invalid.' });
     }
 
     let executing_customer_id;
@@ -63,13 +54,69 @@ export const createBooking = async (req, res) => {
         executing_customer_id = newCustomerNode.rows[0].id;
     }
 
+    let computedServiceId = service_id;
+    if (!computedServiceId) {
+      const serviceRes = await client.query('SELECT id FROM services WHERE service_name = $1 LIMIT 1', [requested_category]);
+      computedServiceId = serviceRes.rows[0]?.id || 1;
+    }
+
+    const priorityNormalized = priority === 'Emergency' ? 'Emergency' : 'Normal';
+    const emergencyFee = priorityNormalized === 'Emergency' ? 500 : 0;
+    const dueBy = priorityNormalized === 'Emergency'
+      ? new Date(new Date(start).setHours(23, 59, 59, 999))
+      : end;
+
     const result = await client.query(
-      'INSERT INTO Bookings (customer_id, worker_id, service_id, description, start_time, end_time, status, booking_date) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *',
-      [executing_customer_id, worker_id, service_id || 1, description, start, end, 'Pending']
+      `INSERT INTO Bookings (
+        customer_id, worker_id, service_id, requested_category, description,
+        start_time, end_time, due_by, priority, priority_fee, status, booking_date,
+        customer_location, customer_latitude, customer_longitude
+      )
+      VALUES ($1, NULL, $2, $3, $4, $5, $6, $7, $8, $9, 'Pending', NOW(), $10, $11, $12)
+      RETURNING *`,
+      [
+        executing_customer_id,
+        computedServiceId,
+        requested_category,
+        description,
+        start,
+        end,
+        dueBy,
+        priorityNormalized,
+        emergencyFee,
+        customer_location,
+        customer_latitude,
+        customer_longitude
+      ]
     );
 
+    const workersRes = await client.query(
+      `SELECT id FROM workers
+       WHERE category = $1
+         AND verification_status = 'Verified'
+         AND is_deleted = false`,
+      [requested_category]
+    );
+
+    for (const worker of workersRes.rows) {
+      await client.query(
+        `INSERT INTO worker_alerts (worker_id, booking_id, alert_message, status, is_active)
+         VALUES ($1, $2, $3, 'Unread', TRUE)`,
+        [
+          worker.id,
+          result.rows[0].id,
+          `${priorityNormalized} ${requested_category} request near ${customer_location || 'your area'}`
+        ]
+      );
+    }
+
     await client.query('COMMIT');
-    res.status(201).json({ success: true, data: result.rows[0], message: 'Booking isolated successfully' });
+    res.status(201).json({
+      success: true,
+      data: result.rows[0],
+      message: 'Booking request broadcasted successfully',
+      alerted_workers: workersRes.rows.length
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ success: false, error: err.message });
@@ -85,11 +132,14 @@ export const getCustomerBookings = async (req, res) => {
     const customerId = customers.rows[0].id;
 
     const bookings = await pool.query(`
-      SELECT b.*, w.category, u.name as worker_name, 
+      SELECT
+             b.*,
+             COALESCE(w.category, b.requested_category) as category,
+             COALESCE(u.name, 'Awaiting assignment') as worker_name,
              (r.id IS NOT NULL) as rating_submitted 
       FROM Bookings b 
-      JOIN Workers w ON b.worker_id = w.id 
-      JOIN Users u ON w.user_id = u.id 
+      LEFT JOIN Workers w ON b.worker_id = w.id 
+      LEFT JOIN Users u ON w.user_id = u.id 
       LEFT JOIN Ratings r ON b.id = r.booking_id
       WHERE b.customer_id = $1
       ORDER BY b.booking_date DESC
@@ -102,9 +152,9 @@ export const getCustomerBookings = async (req, res) => {
 
 export const getWorkerBookings = async (req, res) => {
   try {
-    const workers = await pool.query('SELECT id FROM Workers WHERE user_id = $1', [req.user.id]);
+    const workers = await pool.query('SELECT id, category FROM Workers WHERE user_id = $1', [req.user.id]);
     if (workers.rows.length === 0) return res.status(404).json({ message: 'Worker not found' });
-    const workerId = workers.rows[0].id;
+    const worker = workers.rows[0];
 
     const bookings = await pool.query(`
       SELECT b.*, u.name as customer_name, u.phone as customer_phone
@@ -112,8 +162,22 @@ export const getWorkerBookings = async (req, res) => {
       JOIN Customers c ON b.customer_id = c.id 
       JOIN Users u ON c.user_id = u.id 
       WHERE b.worker_id = $1
-    `, [workerId]);
-    res.json(bookings.rows);
+    `, [worker.id]);
+
+    const openRequests = await pool.query(`
+      SELECT b.*, u.name as customer_name, u.phone as customer_phone
+      FROM Bookings b
+      JOIN Customers c ON b.customer_id = c.id
+      JOIN Users u ON c.user_id = u.id
+      WHERE b.worker_id IS NULL
+        AND b.status = 'Pending'
+        AND b.requested_category = $1
+      ORDER BY
+        CASE WHEN b.priority = 'Emergency' THEN 0 ELSE 1 END,
+        b.booking_date DESC
+    `, [worker.category]);
+
+    res.json([...openRequests.rows, ...bookings.rows]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -124,29 +188,78 @@ export const updateBookingStatus = async (req, res) => {
   const { status } = req.body;
   const client = await pool.connect();
   try {
-    const authQuery = await client.query(`
-      SELECT b.id, 
-             w.user_id as worker_uid,
-             c.user_id as customer_uid
+    const bookingQuery = await client.query(`
+      SELECT b.*,
+             c.user_id as customer_uid,
+             w.user_id as assigned_worker_uid
       FROM Bookings b
-      JOIN Workers w ON b.worker_id = w.id
       JOIN Customers c ON b.customer_id = c.id
+      LEFT JOIN Workers w ON b.worker_id = w.id
       WHERE b.id = $1
     `, [id]);
     
-    if (authQuery.rows.length === 0) {
+    if (bookingQuery.rows.length === 0) {
       return res.status(404).json({ error: 'Binding matrix absent.' });
     }
-    const binding = authQuery.rows[0];
-    
-    if (binding.worker_uid !== req.user.id && binding.customer_uid !== req.user.id) {
-      return res.status(403).json({ error: 'Cryptographic restriction: Client lacked ownership scope over these execution parameters.' });
-    }
+    const booking = bookingQuery.rows[0];
 
     await client.query('BEGIN');
 
-    const updateQuery = status === 'Completed' 
-      ? 'UPDATE Bookings SET status = $1, end_time = NOW() WHERE id = $2' 
+    if (status === 'Accepted') {
+      if (req.user.role !== 'Worker') {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Only workers can accept jobs.' });
+      }
+      if (booking.worker_id) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'Another worker already accepted this request.' });
+      }
+      if (booking.status !== 'Pending') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Only pending requests can be accepted.' });
+      }
+
+      const workerRes = await client.query('SELECT id, category FROM workers WHERE user_id = $1', [req.user.id]);
+      if (workerRes.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Worker profile missing.' });
+      }
+      const worker = workerRes.rows[0];
+      if (booking.requested_category && booking.requested_category !== worker.category) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Category mismatch for this request.' });
+      }
+
+      const conflictCheck = await client.query(`
+        SELECT 1 FROM bookings
+        WHERE worker_id = $1
+          AND status IN ('Pending', 'Accepted')
+          AND is_deleted = false
+          AND (start_time < $3 AND end_time > $2)
+      `, [worker.id, booking.start_time, booking.end_time]);
+      if (conflictCheck.rows.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'You already have an overlapping assignment.' });
+      }
+
+      await client.query('UPDATE bookings SET worker_id = $1, status = $2 WHERE id = $3', [worker.id, 'Accepted', id]);
+      await client.query('UPDATE worker_alerts SET is_active = FALSE, status = $1 WHERE booking_id = $2', ['Read', id]);
+      await client.query('COMMIT');
+      return res.json({ message: 'You are assigned to this booking now.' });
+    }
+
+    if (booking.assigned_worker_uid !== req.user.id && booking.customer_uid !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ error: 'You are not authorized for this booking.' });
+    }
+
+    if (!['Completed', 'Cancelled'].includes(status)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Unsupported status transition.' });
+    }
+
+    const updateQuery = status === 'Completed'
+      ? 'UPDATE Bookings SET status = $1, end_time = NOW() WHERE id = $2'
       : 'UPDATE Bookings SET status = $1 WHERE id = $2';
     await client.query(updateQuery, [status, id]);
 
@@ -181,6 +294,8 @@ export const updateBookingStatus = async (req, res) => {
           WHERE id = $4
         `, [totalCompleted, completionRate, trustChange, booking.worker_id]);
       }
+    } else if (status === 'Cancelled') {
+      await client.query('UPDATE worker_alerts SET is_active = FALSE, status = $1 WHERE booking_id = $2', ['Read', id]);
     }
 
     await client.query('COMMIT');
