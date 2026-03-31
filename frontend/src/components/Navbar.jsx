@@ -1,8 +1,10 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { FaUserCircle, FaSignOutAlt, FaRocket, FaSearch } from 'react-icons/fa';
 
 function Navbar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const user = JSON.parse(localStorage.getItem('user'));
 
   const handleLogout = () => {
@@ -11,25 +13,43 @@ function Navbar() {
     navigate('/login');
   };
 
+  const isActive = (path) => location.pathname === path;
+
   return (
     <nav className="navbar">
-      <Link to="/" className="navbar-brand">Smart City Services</Link>
+      <Link to="/" className="navbar-brand">
+         <div style={{ background: 'var(--primary)', color: 'white', padding: '0.4rem 0.6rem', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginRight: '0.4rem' }}>
+          G
+        </div>
+        <span style={{ color: '#202020', letterSpacing: '-0.02em', fontSize: '1.4rem' }}>SmartCity</span>
+      </Link>
       <div className="navbar-links">
+        <Link to="/workers" style={{ color: isActive('/workers') ? 'var(--primary)' : 'var(--text-muted)' }}>
+          Professionals
+        </Link>
+        <Link to="/" style={{ color: isActive('/') ? 'var(--primary)' : 'var(--text-muted)' }}>
+          Community
+        </Link>
+        
+        <div style={{ width: '1px', height: '20px', background: 'var(--border)', margin: '0 0.5rem' }}></div>
+
         {user ? (
-          <div className="navbar-user">
-            <Link to="/profile" title="Profile Settings" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), #8b5cf6)', color: 'white', fontWeight: 'bold', fontSize: '1.2rem', textDecoration: 'none', boxShadow: '0 3px 8px rgba(59,130,246,0.25)', marginRight: '0.75rem', border: '2px solid white' }}>
-              {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+            <Link to="/profile" style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--text)', fontWeight: '700' }}>
+              <FaUserCircle size={22} color="var(--primary)" />
+              <span>{user?.name?.split(' ')[0]}</span>
             </Link>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'center' }}>
-               <strong style={{ fontSize: '0.90rem', color: 'var(--text)' }}>{user?.name?.split(' ')[0]}</strong>
-               <button onClick={handleLogout} style={{ padding: 0, width: 'auto', background: 'transparent', border: 'none', color: '#dc2626', fontSize: '0.75rem', cursor: 'pointer', textAlign: 'left', fontWeight: '900', textTransform: 'uppercase', marginTop: '0.1rem' }}>Terminate Session</button>
-            </div>
+            <button 
+              onClick={handleLogout} 
+              style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: '99px', padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-light)' }}
+            >
+              Sign Out
+            </button>
           </div>
         ) : (
           <>
-            <Link to="/workers" className="btn btn-outline" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginRight: '1rem', padding: '0.6rem 1.5rem', width: 'auto', border: '2px solid var(--primary)', color: 'var(--primary)', fontWeight: 'bold', height: '44px', boxSizing: 'border-box' }}>Find Professionals</Link>
-            <Link to="/login" style={{ marginRight: '1.5rem', fontWeight: 'bold', color: 'var(--text-light)', textDecoration: 'none' }}>Log In</Link>
-            <Link to="/register" className="btn" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0.6rem 1.5rem', width: 'auto', background: 'var(--primary)', color: 'white', fontWeight: 'bold', height: '44px', boxSizing: 'border-box', boxShadow: '0 4px 10px rgba(79,70,229,0.2)' }}>Sign Up Free</Link>
+            <Link to="/login" style={{ fontWeight: '700', color: 'var(--text-muted)', fontSize: '0.95rem' }}>Sign In</Link>
+            <Link to="/register" className="btn" style={{ padding: '0.6rem 1.25rem', fontSize: '0.9rem', borderRadius: '4px' }}>Join Now</Link>
           </>
         )}
       </div>

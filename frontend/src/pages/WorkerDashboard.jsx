@@ -1,101 +1,125 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FaCalendarAlt, FaCheckCircle, FaBriefcase, FaTimesCircle } from 'react-icons/fa';
+import { FaCalendarAlt, FaCheckCircle, FaBriefcase, FaUser } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import api from '../services/api';
-import SkeletonLoader from '../components/SkeletonLoader';
-import EmptyState from '../components/EmptyState';
 
 function WorkerDashboard() {
   const [activeTab, setActiveTab] = useState('incoming');
 
   const { data: jobs = [], isLoading: jobsLoading, refetch: refetchJobs } = useQuery({
-    queryKey: ['workerJobs'],
+    queryKey: ['workerJobs', activeTab],
     queryFn: () => api.get('/bookings/worker').then(res => res.data),
-    refetchInterval: 10000 
+    refetchInterval: 30000 
   });
 
   const { data: myBookings = [], isLoading: bookingsLoading, refetch: refetchBookings } = useQuery({
     queryKey: ['myBookings'],
     queryFn: () => api.get('/bookings/customer').then(res => res.data.data || res.data),
-    refetchInterval: 10000 
+    refetchInterval: 30000 
   });
 
   const updateJobStatus = async (id, status) => {
     try {
       await api.put(`/bookings/${id}/status`, { status });
-      toast.success(`Job execution vector locked explicitly to ${status}`);
+      toast.success(`Job status updated to ${status}.`);
       refetchJobs();
     } catch (err) {
-      toast.error('Failed to change bounded job properties safely.');
-    }
-  };
-
-  const cancelMyBooking = async (id) => {
-    try {
-      await api.put(`/bookings/${id}/status`, { status: 'Cancelled' });
-      toast.info('Booking request explicitly aborted.');
-      refetchBookings();
-    } catch (err) {
-      toast.error('Could not communicate cancel logic.');
+      toast.error('Failed to update job status.');
     }
   };
 
   return (
-    <div className="container" style={{ maxWidth: '1000px' }}>
-      <h1 className="dashboard-title" style={{ marginBottom: '2rem', fontSize: '2rem' }}>My Dashboard</h1>
+    <div className="container" style={{ marginTop: '3rem' }}>
+      <header style={{ marginBottom: '3rem' }}>
+        <h1 style={{ fontSize: '2rem', fontWeight: '900', color: 'var(--text)' }}>Professional Terminal</h1>
+        <p style={{ color: 'var(--text-light)', marginTop: '0.25rem' }}>Manage your assignments and service requests.</p>
+      </header>
       
-      <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '1.25rem', marginBottom: '2.5rem' }}>
-         <button onClick={() => setActiveTab('incoming')} className={`btn ${activeTab !== 'incoming' ? 'btn-ghost' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.75rem', borderRadius: '8px', fontSize: '1rem' }}>
-            <FaBriefcase /> Jobs Assigned to Me ({jobs.length})
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '2.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '1rem' }}>
+         <button onClick={() => setActiveTab('incoming')} style={{ 
+           background: 'none', border: 'none', padding: '0.75rem 1.5rem', cursor: 'pointer',
+           fontWeight: '800', fontSize: '0.95rem', color: activeTab === 'incoming' ? 'var(--primary)' : 'var(--text-light)',
+           borderBottom: activeTab === 'incoming' ? '3px solid var(--primary)' : '3px solid transparent',
+           transition: 'all 0.2s'
+         }}>
+            Assigned Jobs ({jobs.length})
          </button>
-         <button onClick={() => setActiveTab('bookings')} className={`btn ${activeTab !== 'bookings' ? 'btn-ghost' : ''}`} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.75rem', borderRadius: '8px', background: activeTab === 'bookings' ? '#10b981' : 'transparent', color: activeTab === 'bookings' ? 'white' : 'var(--text-light)', fontSize: '1rem' }}>
-            <FaCalendarAlt /> My Service Requests ({myBookings.length})
+         <button onClick={() => setActiveTab('bookings')} style={{ 
+           background: 'none', border: 'none', padding: '0.75rem 1.5rem', cursor: 'pointer',
+           fontWeight: '800', fontSize: '0.95rem', color: activeTab === 'bookings' ? 'var(--primary)' : 'var(--text-light)',
+           borderBottom: activeTab === 'bookings' ? '3px solid var(--primary)' : '3px solid transparent',
+           transition: 'all 0.2s'
+         }}>
+            My Requests ({myBookings.length})
          </button>
       </div>
 
-      {activeTab === 'incoming' && (
-        <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-          {jobsLoading ? <SkeletonLoader count={1} type="list"/> : jobs.length > 0 ? (
-             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                {jobs.map(job => (
-                   <div key={job.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'white' }}>
-                     <div>
-                       <strong style={{ display: 'block', fontSize: '1.15rem', marginBottom: '0.35rem' }}>{job.customer_name} {job.status !== 'Pending' && <span style={{ color: 'var(--text-light)', fontWeight: 'normal', fontSize: '0.9rem' }}>({job.customer_phone})</span>}</strong>
-                       <p style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontStyle: 'italic', lineHeight: '1.4' }}>"{job.description}"</p>
-                       <p style={{ margin: 0, fontSize: '0.85rem' }}>Start Time: {job.start_time ? new Date(job.start_time).toLocaleString() : 'Not set'}</p>
-                     </div>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexDirection: 'column' }}>
-                       <span className={`badge ${job.status.toLowerCase()}`} style={{ width: '100%', textAlign: 'center', padding: '0.4rem 1rem' }}>{job.status}</span>
-                       {job.status === 'Pending' && <button onClick={() => updateJobStatus(job.id, 'Accepted')} className="btn btn-outline" style={{ padding: '0.4rem 1.25rem', fontSize: '0.85rem', width: '100%' }}>Accept Job</button>}
-                       {job.status === 'Accepted' && <button onClick={() => updateJobStatus(job.id, 'Completed')} className="btn" style={{ background: '#10b981', padding: '0.4rem 1.25rem', fontSize: '0.85rem', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}><FaCheckCircle size={14} /> Mark Completed</button>}
-                     </div>
-                   </div>
-                ))}
-             </div>
-          ) : <EmptyState title="No Jobs Assigned" description="You have no incoming or assigned jobs at the moment." />}
+      {activeTab === 'incoming' ? (
+        <div>
+          {jobsLoading ? (
+            <div style={{ textAlign: 'center', padding: '3rem' }}>Loading assignments...</div>
+          ) : jobs.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {jobs.map(job => (
+                <div key={job.id} className="card" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+                       <span style={{ fontWeight: '800', fontSize: '1.1rem' }}>{job.customer_name}</span>
+                       <span className={`badge ${job.status.toLowerCase()}`}>{job.status}</span>
+                    </div>
+                    <p style={{ margin: '0 0 1rem', color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>"{job.description}"</p>
+                    <div style={{ display: 'flex', gap: '1.5rem', color: 'var(--text-light)', fontSize: '0.8rem', fontWeight: '700' }}>
+                       <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                          <FaCalendarAlt /> {new Date(job.start_time).toLocaleDateString()}
+                       </span>
+                       {job.status !== 'Pending' && (
+                         <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <FaUser /> {job.customer_phone}
+                         </span>
+                       )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {job.status === 'Pending' && (
+                      <>
+                        <button onClick={() => updateJobStatus(job.id, 'Accepted')} className="btn" style={{ padding: '0.5rem 1.5rem' }}>Accept</button>
+                        <button onClick={() => updateJobStatus(job.id, 'Cancelled')} className="btn btn-outline" style={{ borderColor: 'var(--danger)', color: 'var(--danger)', padding: '0.5rem 1.5rem' }}>Decline</button>
+                      </>
+                    )}
+                    {job.status === 'Accepted' && (
+                      <button onClick={() => updateJobStatus(job.id, 'Completed')} className="btn" style={{ padding: '0.5rem 1.5rem' }}>Mark Completed</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card" style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-light)' }}>
+               <FaBriefcase size={32} style={{ marginBottom: '1rem' }} />
+               <p>No jobs assigned to your portfolio yet.</p>
+            </div>
+          )}
         </div>
-      )}
-
-      {activeTab === 'bookings' && (
-        <div style={{ animation: 'fadeIn 0.3s ease-out' }}>
-          {bookingsLoading ? <SkeletonLoader count={1} type="list"/> : myBookings.length > 0 ? (
-             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-                {myBookings.map(b => (
-                   <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem', borderBottom: '1px solid var(--border)', background: 'white' }}>
-                     <div>
-                       <strong style={{ display: 'block', fontSize: '1.15rem', marginBottom: '0.35rem' }}>{b.worker_name} <span style={{ color: '#8b5cf6', fontWeight: 'bold', fontSize: '0.9rem', background: '#f5f3ff', padding: '0.25rem 0.5rem', borderRadius: '8px', marginLeft: '0.25rem' }}>{b.category}</span></strong>
-                       <p style={{ margin: '0 0 0.5rem 0', color: '#64748b', fontStyle: 'italic', lineHeight: '1.4' }}>"{b.description}"</p>
-                       <p style={{ margin: 0, fontSize: '0.85rem' }}>Start Time: {b.start_time ? new Date(b.start_time).toLocaleString() : 'Not set'}</p>
-                     </div>
-                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexDirection: 'column' }}>
-                       <span className={`badge ${b.status.toLowerCase()}`} style={{ width: '100%', textAlign: 'center', padding: '0.4rem 1rem' }}>{b.status}</span>
-                       {b.status === 'Pending' && <button onClick={() => cancelMyBooking(b.id)} className="btn btn-secondary" style={{ padding: '0.4rem 1.25rem', fontSize: '0.85rem', color: '#ef4444', display: 'flex', alignItems: 'center', gap: '0.4rem' }}><FaTimesCircle size={14} /> Cancel Request</button>}
-                     </div>
-                   </div>
-                ))}
-             </div>
-          ) : <EmptyState title="No Service Requests" description="You haven't requested any services from other workers yet." />}
+      ) : (
+        <div>
+          {myBookings.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {myBookings.map(b => (
+                <div key={b.id} className="card" style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: '800', fontSize: '1.1rem' }}>{b.worker_name}</div>
+                    <div style={{ color: 'var(--secondary)', fontWeight: '700', fontSize: '0.85rem' }}>{b.category}</div>
+                  </div>
+                  <span className={`badge ${b.status.toLowerCase()}`}>{b.status}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="card" style={{ padding: '4rem', textAlign: 'center', color: 'var(--text-light)' }}>
+               <p>You haven't requested any services from other professionals.</p>
+            </div>
+          )}
         </div>
       )}
     </div>

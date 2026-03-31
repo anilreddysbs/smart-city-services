@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { FaEye, FaEyeSlash, FaGoogle, FaLinkedin } from 'react-icons/fa';
+import { FaEye, FaEyeSlash, FaLock, FaEnvelope } from 'react-icons/fa';
 import api from '../services/api';
 
 function Login() {
@@ -11,6 +11,8 @@ function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const isAdminPortal = import.meta.env.VITE_ADMIN_PORTAL === 'true';
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -20,9 +22,20 @@ function Login() {
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       const user = res.data.user;
-      if (user.role === 'Admin') navigate('/dashboard/admin');
-      else if (user.role === 'Worker') navigate('/dashboard/worker');
-      else navigate('/dashboard/customer');
+
+      if (isAdminPortal) {
+        if (user.role !== 'Admin') {
+          setError('Access Denied: This portal is strictly for system administrators.');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          return;
+        }
+        navigate('/dashboard/admin');
+      } else {
+        if (user.role === 'Admin') navigate('/dashboard/admin');
+        else if (user.role === 'Worker') navigate('/dashboard/worker');
+        else navigate('/dashboard/customer');
+      }
     } catch (err) {
       setError(err.response?.data?.error || err.response?.data?.message || 'Authentication sequence failed.');
     } finally {
@@ -30,63 +43,59 @@ function Login() {
     }
   };
 
-  const inputStyle = { width: '100%', padding: '0.75rem', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '1rem' };
-
   return (
-    <div style={{ minHeight: 'calc(100vh - 70px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)', padding: '2rem' }}>
-      <div className="card" style={{ maxWidth: '450px', width: '100%', padding: '2.5rem', borderRadius: '12px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)', background: 'white' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '0.5rem', fontSize: '1.75rem', color: '#0f172a' }}>Welcome back</h2>
-        <p style={{ textAlign: 'center', color: '#64748b', marginBottom: '2rem', fontSize: '0.95rem' }}>Enter your credentials to access your dashboard</p>
+    <div style={{ minHeight: 'calc(100vh - 72px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--background-alt)', padding: '2rem' }}>
+      <div className="card" style={{ maxWidth: '420px', width: '100%', padding: '3rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
         
-        {error && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '0.75rem', borderRadius: '6px', marginBottom: '1.5rem', textAlign: 'center', fontSize: '0.9rem', border: '1px solid #f87171' }}>{error}</div>}
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: '900', color: 'var(--text)', marginBottom: '0.5rem' }}>
+            {isAdminPortal ? 'Admin Intelligence' : 'Welcome to SmartCity'}
+          </h2>
+          <p style={{ color: 'var(--text-light)', fontSize: '0.95rem' }}>
+            {isAdminPortal ? 'Authenticate to access the orchestration layer' : 'Sign in to manage your professional services'}
+          </p>
+        </div>
+        
+        {error && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'center', fontSize: '0.85rem', border: '1px solid #f87171', fontWeight: '600' }}>{error}</div>}
         
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Email Address</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required style={inputStyle} placeholder="name@example.com" />
+          <div className="form-group">
+            <label>Email Address</label>
+            <div style={{ position: 'relative' }}>
+               <FaEnvelope style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+               <input type="email" value={email} onChange={e => setEmail(e.target.value)} required style={{ paddingLeft: '2.8rem' }} placeholder="name@domain.com" />
+            </div>
           </div>
           
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-               <label style={{ fontWeight: '600', color: '#334155', fontSize: '0.9rem' }}>Password</label>
-               <Link to="/forgot-password" style={{ fontSize: '0.85rem', color: 'var(--primary)', cursor: 'pointer', fontWeight: '500', textDecoration: 'none' }}>Forgot Password?</Link>
-            </div>
+          <div className="form-group" style={{ marginBottom: '1rem' }}>
+            <label>Password</label>
             <div style={{ position: 'relative' }}>
-              <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required style={{...inputStyle, paddingRight: '2.5rem'}} placeholder="••••••••" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer' }}>
-                {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+              <FaLock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+              <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required style={{ paddingLeft: '2.8rem', paddingRight: '3rem' }} placeholder="••••••••" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-light)', cursor: 'pointer' }}>
+                {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
               </button>
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-             <input type="checkbox" id="remember" style={{ cursor: 'pointer' }} />
-             <label htmlFor="remember" style={{ fontSize: '0.9rem', color: '#475569', cursor: 'pointer' }}>Remember me for 30 days</label>
+          <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+             <Link to="/forgot-password" style={{ color: 'var(--secondary)', fontWeight: '700', fontSize: '0.85rem' }}>Forgot password?</Link>
           </div>
 
-          <button type="submit" disabled={loading} className="btn" style={{ width: '100%', padding: '0.85rem', fontSize: '1.05rem', fontWeight: 'bold', marginTop: '0.5rem', borderRadius: '6px', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}>
-            {loading ? 'Authenticating...' : 'Sign in'}
+          <button type="submit" disabled={loading} className="btn" style={{ width: '100%', height: '52px' }}>
+            {loading ? 'Authenticating...' : isAdminPortal ? 'Access Terminal' : 'Sign In'}
           </button>
         </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', margin: '2rem 0', color: '#94a3b8' }}>
-          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
-          <span style={{ padding: '0 1rem', fontSize: '0.85rem' }}>Or continue with</span>
-          <div style={{ flex: 1, height: '1px', background: '#e2e8f0' }}></div>
+        <div style={{ marginTop: '2.5rem', textAlign: 'center', borderTop: '1px solid var(--border-light)', paddingTop: '2rem' }}>
+           <p style={{ fontSize: '0.95rem', color: 'var(--text-light)' }}>
+             {!isAdminPortal ? (
+               <>New to SmartCity? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: '800' }}>Join Free</Link></>
+             ) : (
+               <span style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>Protected Administrative Entry Node</span>
+             )}
+           </p>
         </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
-           <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.75rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#334155', fontWeight: '600', cursor: 'pointer' }}>
-             <FaGoogle color="#ea4335" /> Google
-           </button>
-           <button style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '0.75rem', background: 'white', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#334155', fontWeight: '600', cursor: 'pointer' }}>
-             <FaLinkedin color="#0a66c2" /> LinkedIn
-           </button>
-        </div>
-
-        <p style={{ textAlign: 'center', margin: 0, fontSize: '0.95rem', color: '#64748b' }}>
-          Don't have an account? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: 'bold', textDecoration: 'none' }}>Sign up here</Link>
-        </p>
       </div>
     </div>
   );
