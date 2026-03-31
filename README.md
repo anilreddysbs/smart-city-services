@@ -49,7 +49,7 @@ The backend is designed strictly to withstand scaling through non-destructive `.
 ### Local Build Steps
 1. **Clone the repository:**
    \`\`\`bash
-   git clone https://github.com/surendrareddysabbella9-bot/smart-city-services_v1.git
+   git clone https://github.com/anilreddysbs/smart-city-services.git
    cd smart-city-services
    \`\`\`
 
