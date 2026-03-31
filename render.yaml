@@ -5,7 +5,7 @@ services:
     env: node
     plan: free
     buildCommand: "npm --prefix frontend install && export VITE_ADMIN_PORTAL=false && npm --prefix frontend run build && npm --prefix backend install"
-    startCommand: "node backend/init_db.mjs && node backend/migrate_v2.mjs && node backend/migrate_v3.mjs && node backend/migrate_v4.mjs && node backend/migrate_v5.mjs && node backend/migrate_v6.mjs && node backend/migrate_v7.mjs && node backend/migrate_v8.mjs && node backend/migrate_v9.mjs && node backend/migrate_v10.mjs && node backend/server.js"
+    startCommand: "node backend/init_db.mjs && node backend/migrate_v2.mjs && node backend/migrate_v3.mjs && node backend/migrate_v4.mjs && node backend/migrate_v5.mjs && node backend/migrate_v6.mjs && node backend/migrate_v7.mjs && node backend/migrate_v8.mjs && node backend/migrate_v9.mjs && node backend/migrate_v10.mjs && node backend/migrate_v11.mjs && node backend/server.js"
     envVars:
       - key: NODE_ENV
         value: production
