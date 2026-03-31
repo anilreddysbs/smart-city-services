@@ -21,6 +21,7 @@ import DashboardLayout from './components/DashboardLayout';
 import WorkerProfile from './pages/WorkerProfile';
 import ForgotPassword from './pages/ForgotPassword';
 import Community from './pages/Community';
+import GoogleTranslateManager from './components/GoogleTranslateManager';
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <GoogleTranslateManager />
       <Router>
         <Navbar />
         <Routes>

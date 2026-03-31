@@ -10,37 +10,6 @@ function Navbar() {
   const isCustomer = user?.role === 'Customer';
   const [language, setLanguage] = React.useState(localStorage.getItem('ui_language') || 'en');
 
-  const labels = {
-    en: {
-      professionals: 'Professionals',
-      myJobs: 'My Jobs',
-      myBookings: 'My Bookings',
-      community: 'Community',
-      signOut: 'Sign Out',
-      signIn: 'Sign In',
-      joinNow: 'Join Now'
-    },
-    hi: {
-      professionals: 'पेशेवर',
-      myJobs: 'मेरे जॉब्स',
-      myBookings: 'मेरी बुकिंग्स',
-      community: 'समुदाय',
-      signOut: 'साइन आउट',
-      signIn: 'साइन इन',
-      joinNow: 'अभी जुड़ें'
-    },
-    te: {
-      professionals: 'నిపుణులు',
-      myJobs: 'నా పనులు',
-      myBookings: 'నా బుకింగ్స్',
-      community: 'సమాజం',
-      signOut: 'సైన్ అవుట్',
-      signIn: 'సైన్ ఇన్',
-      joinNow: 'ఇప్పుడే చేరండి'
-    }
-  };
-  const t = labels[language] || labels.en;
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -50,7 +19,11 @@ function Navbar() {
   const handleLanguageChange = (e) => {
     const next = e.target.value;
     setLanguage(next);
-    localStorage.setItem('ui_language', next);
+    if (window.applySiteLanguage) {
+      window.applySiteLanguage(next);
+    } else {
+      localStorage.setItem('ui_language', next);
+    }
   };
 
   const isActive = (path) => location.pathname === path;
@@ -82,26 +55,26 @@ function Navbar() {
         {/* Not a worker: show Professionals directory */}
         {!isWorker && (
           <Link to="/workers" style={{ color: isActive('/workers') ? 'var(--primary)' : 'var(--text-muted)', fontWeight: '600', fontSize: '0.92rem' }}>
-            {t.professionals}
+            Professionals
           </Link>
         )}
 
         {/* Worker shortcut: go straight to their dashboard */}
         {isWorker && (
           <Link to="/dashboard/worker" style={{ color: isActive('/dashboard/worker') ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '600', fontSize: '0.92rem' }}>
-            <FaBriefcase size={13} /> {t.myJobs}
+            <FaBriefcase size={13} /> My Jobs
           </Link>
         )}
 
         {/* Customer shortcut to their bookings */}
         {isCustomer && (
           <Link to="/dashboard/customer" style={{ color: isActive('/dashboard/customer') ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '600', fontSize: '0.92rem' }}>
-            <FaCalendarAlt size={13} /> {t.myBookings}
+            <FaCalendarAlt size={13} /> My Bookings
           </Link>
         )}
 
         <Link to="/community" style={{ color: isActive('/community') ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '600', fontSize: '0.92rem' }}>
-          <FaComments size={13} /> {t.community}
+          <FaComments size={13} /> Community
         </Link>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.3rem 0.5rem' }}>
@@ -143,13 +116,13 @@ function Navbar() {
               onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border-light)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'var(--background-alt)'}
             >
-              <FaSignOutAlt size={12} /> {t.signOut}
+              <FaSignOutAlt size={12} /> Sign Out
             </button>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <Link to="/login" style={{ fontWeight: '800', color: 'var(--text)', fontSize: '0.9rem' }}>{t.signIn}</Link>
-            <Link to="/register" className="btn" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: '8px' }}>{t.joinNow}</Link>
+            <Link to="/login" style={{ fontWeight: '800', color: 'var(--text)', fontSize: '0.9rem' }}>Sign In</Link>
+            <Link to="/register" className="btn" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: '8px' }}>Join Now</Link>
           </div>
         )}
       </div>
