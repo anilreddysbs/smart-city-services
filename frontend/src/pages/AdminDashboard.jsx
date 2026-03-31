@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
 import { Link } from 'react-router-dom';
-import { FaTrash, FaSearch, FaUserShield, FaCheckCircle, FaExclamationTriangle, FaUsers, FaChartBar, FaBan, FaUndo } from 'react-icons/fa';
+import { FaTrash, FaSearch, FaUserShield, FaCheckCircle, FaExclamationTriangle, FaUsers, FaChartBar, FaBan, FaUndo, FaMapMarkerAlt, FaSpinner } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 function AdminDashboard() {
@@ -15,9 +15,10 @@ function AdminDashboard() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [geoStatus, setGeoStatus] = useState('idle');
   const [newUserData, setNewUserData] = useState({
     name: '', email: '', phone: '', password: '', role: 'Customer',
-    category: 'Electrician', experience: '0', location: ''
+    category: 'Electrician', experience: '0', location: '', latitude: null, longitude: null
   });
 
   useEffect(() => { fetchData(); }, []);
@@ -86,7 +87,8 @@ function AdminDashboard() {
       await api.post('/auth/register', newUserData);
       toast.success(`${newUserData.role} registered successfully.`);
       setShowCreateModal(false);
-      setNewUserData({ name: '', email: '', phone: '', password: '', role: 'Customer', category: 'Electrician', experience: '0', location: '' });
+      setNewUserData({ name: '', email: '', phone: '', password: '', role: 'Customer', category: 'Electrician', experience: '0', location: '', latitude: null, longitude: null });
+      setGeoStatus('idle');
       fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Registration failed.');
@@ -108,6 +110,42 @@ function AdminDashboard() {
 
   const suspendedCount = allWorkers.filter(w => w.verification_status === 'Rejected').length;
   const activeCount = allWorkers.filter(w => w.verification_status === 'Verified').length;
+  
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setGeoStatus('error');
+      return;
+    }
+    setGeoStatus('loading');
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`,
+            { headers: { 'Accept-Language': 'en' } }
+          );
+          const data = await res.json();
+          const city =
+            data.address?.city ||
+            data.address?.town ||
+            data.address?.village ||
+            data.address?.county ||
+            data.address?.state ||
+            'Unknown Location';
+          const state = data.address?.state || '';
+          const locationLabel = state ? `${city}, ${state}` : city;
+          setNewUserData((prev) => ({ ...prev, location: locationLabel, latitude, longitude }));
+          setGeoStatus('success');
+        } catch {
+          setNewUserData((prev) => ({ ...prev, location: prev.location || 'My Location', latitude, longitude }));
+          setGeoStatus('success');
+        }
+      },
+      () => setGeoStatus('error'),
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
 
   return (
     <div style={{ padding: '2rem 0' }}>
@@ -368,7 +406,34 @@ function AdminDashboard() {
                   <input type="number" placeholder="Years Exp." value={newUserData.experience} onChange={e => setNewUserData({ ...newUserData, experience: e.target.value })} style={{ width: '90px', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }} />
                 </div>
               )}
-              <input type="text" placeholder="Location / City" value={newUserData.location} onChange={e => setNewUserData({ ...newUserData, location: e.target.value })} required style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }} />
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text-light)', fontWeight: '700' }}>Location / City</span>
+                  <button
+                    type="button"
+                    onClick={handleDetectLocation}
+                    disabled={geoStatus === 'loading'}
+                    style={{
+                      background: geoStatus === 'success' ? 'var(--primary-light)' : geoStatus === 'error' ? '#fee2e2' : 'var(--background-alt)',
+                      border: `1px solid ${geoStatus === 'success' ? 'var(--primary)' : geoStatus === 'error' ? '#fca5a5' : 'var(--border)'}`,
+                      borderRadius: '6px',
+                      padding: '0.25rem 0.65rem',
+                      fontSize: '0.72rem',
+                      fontWeight: '800',
+                      cursor: geoStatus === 'loading' ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '0.3rem',
+                      color: geoStatus === 'success' ? 'var(--primary)' : geoStatus === 'error' ? '#dc2626' : 'var(--text-muted)'
+                    }}
+                  >
+                    {geoStatus === 'loading' && <FaSpinner style={{ animation: 'spin 1s linear infinite' }} />}
+                    {geoStatus !== 'loading' && <FaMapMarkerAlt size={10} />}
+                    {geoStatus === 'loading' ? 'Detecting...' : 'Auto Detect'}
+                  </button>
+                </div>
+                <input type="text" placeholder="Location / City" value={newUserData.location} onChange={e => setNewUserData({ ...newUserData, location: e.target.value })} required style={{ width: '100%', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }} />
+              </div>
               <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
                 <button type="button" onClick={() => setShowCreateModal(false)} style={{ flex: 1, height: '48px', borderRadius: '8px', border: '1px solid var(--border)', background: 'white', fontWeight: '700', cursor: 'pointer' }}>Cancel</button>
                 <button disabled={isProcessing} type="submit" className="btn" style={{ flex: 2, height: '48px', borderRadius: '8px' }}>{isProcessing ? 'Creating...' : 'Create User'}</button>
@@ -377,6 +442,7 @@ function AdminDashboard() {
           </div>
         </div>
       )}
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

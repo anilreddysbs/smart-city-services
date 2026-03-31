@@ -83,10 +83,13 @@ export const getProfile = async (req, res) => {
     let profile = userRes.rows[0];
 
     if (profile.role === 'Worker') {
-      const workerRes = await pool.query('SELECT location, experience FROM Workers WHERE user_id = $1', [req.user.id]);
+      const workerRes = await pool.query(
+        'SELECT location, experience, trust_score, total_jobs, completion_rate, latitude, longitude FROM Workers WHERE user_id = $1',
+        [req.user.id]
+      );
       if (workerRes.rows.length > 0) profile = { ...profile, ...workerRes.rows[0] };
     } else if (profile.role === 'Customer') {
-      const custRes = await pool.query('SELECT location FROM Customers WHERE user_id = $1', [req.user.id]);
+      const custRes = await pool.query('SELECT location, latitude, longitude FROM Customers WHERE user_id = $1', [req.user.id]);
       if (custRes.rows.length > 0) profile = { ...profile, ...custRes.rows[0] };
     }
     res.json(profile);

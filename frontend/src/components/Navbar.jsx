@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { FaUserCircle, FaSignOutAlt, FaCity, FaBriefcase, FaCalendarAlt, FaComments } from 'react-icons/fa';
+import { FaUserCircle, FaSignOutAlt, FaCity, FaBriefcase, FaCalendarAlt, FaComments, FaGlobe } from 'react-icons/fa';
 
 function Navbar() {
   const navigate = useNavigate();
@@ -8,11 +8,49 @@ function Navbar() {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   const isWorker = user?.role === 'Worker';
   const isCustomer = user?.role === 'Customer';
+  const [language, setLanguage] = React.useState(localStorage.getItem('ui_language') || 'en');
+
+  const labels = {
+    en: {
+      professionals: 'Professionals',
+      myJobs: 'My Jobs',
+      myBookings: 'My Bookings',
+      community: 'Community',
+      signOut: 'Sign Out',
+      signIn: 'Sign In',
+      joinNow: 'Join Now'
+    },
+    hi: {
+      professionals: 'पेशेवर',
+      myJobs: 'मेरे जॉब्स',
+      myBookings: 'मेरी बुकिंग्स',
+      community: 'समुदाय',
+      signOut: 'साइन आउट',
+      signIn: 'साइन इन',
+      joinNow: 'अभी जुड़ें'
+    },
+    te: {
+      professionals: 'నిపుణులు',
+      myJobs: 'నా పనులు',
+      myBookings: 'నా బుకింగ్స్',
+      community: 'సమాజం',
+      signOut: 'సైన్ అవుట్',
+      signIn: 'సైన్ ఇన్',
+      joinNow: 'ఇప్పుడే చేరండి'
+    }
+  };
+  const t = labels[language] || labels.en;
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
+  };
+  
+  const handleLanguageChange = (e) => {
+    const next = e.target.value;
+    setLanguage(next);
+    localStorage.setItem('ui_language', next);
   };
 
   const isActive = (path) => location.pathname === path;
@@ -44,27 +82,36 @@ function Navbar() {
         {/* Not a worker: show Professionals directory */}
         {!isWorker && (
           <Link to="/workers" style={{ color: isActive('/workers') ? 'var(--primary)' : 'var(--text-muted)', fontWeight: '600', fontSize: '0.92rem' }}>
-            Professionals
+            {t.professionals}
           </Link>
         )}
 
         {/* Worker shortcut: go straight to their dashboard */}
         {isWorker && (
           <Link to="/dashboard/worker" style={{ color: isActive('/dashboard/worker') ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '600', fontSize: '0.92rem' }}>
-            <FaBriefcase size={13} /> My Jobs
+            <FaBriefcase size={13} /> {t.myJobs}
           </Link>
         )}
 
         {/* Customer shortcut to their bookings */}
         {isCustomer && (
           <Link to="/dashboard/customer" style={{ color: isActive('/dashboard/customer') ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '600', fontSize: '0.92rem' }}>
-            <FaCalendarAlt size={13} /> My Bookings
+            <FaCalendarAlt size={13} /> {t.myBookings}
           </Link>
         )}
 
         <Link to="/community" style={{ color: isActive('/community') ? 'var(--primary)' : 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: '600', fontSize: '0.92rem' }}>
-          <FaComments size={13} /> Community
+          <FaComments size={13} /> {t.community}
         </Link>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', border: '1px solid var(--border)', borderRadius: '8px', padding: '0.3rem 0.5rem' }}>
+          <FaGlobe size={12} color="var(--text-light)" />
+          <select value={language} onChange={handleLanguageChange} style={{ border: 'none', background: 'transparent', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: '700', outline: 'none', cursor: 'pointer' }} title="Language">
+            <option value="en">EN</option>
+            <option value="hi">हिं</option>
+            <option value="te">తె</option>
+          </select>
+        </div>
 
         <div style={{ width: '1px', height: '24px', background: 'var(--border-light)', margin: '0 0.5rem' }} />
 
@@ -96,13 +143,13 @@ function Navbar() {
               onMouseEnter={(e) => e.currentTarget.style.background = 'var(--border-light)'}
               onMouseLeave={(e) => e.currentTarget.style.background = 'var(--background-alt)'}
             >
-              <FaSignOutAlt size={12} /> Sign Out
+              <FaSignOutAlt size={12} /> {t.signOut}
             </button>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <Link to="/login" style={{ fontWeight: '800', color: 'var(--text)', fontSize: '0.9rem' }}>Sign In</Link>
-            <Link to="/register" className="btn" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: '8px' }}>Join Now</Link>
+            <Link to="/login" style={{ fontWeight: '800', color: 'var(--text)', fontSize: '0.9rem' }}>{t.signIn}</Link>
+            <Link to="/register" className="btn" style={{ padding: '0.6rem 1.5rem', fontSize: '0.85rem', borderRadius: '8px' }}>{t.joinNow}</Link>
           </div>
         )}
       </div>

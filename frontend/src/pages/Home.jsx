@@ -161,7 +161,7 @@ function Home() {
           <div>
             <h4 style={{ fontSize: '1rem', fontWeight: '800', marginBottom: '1.25rem' }}>Product</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.9rem' }}>
-              <Link to="/workers">Browse Professionals</Link>
+              {!isWorker && <Link to="/workers">Browse Professionals</Link>}
               <Link to="/">Cities & Locations</Link>
               <Link to="/register">Register Professional</Link>
             </div>
