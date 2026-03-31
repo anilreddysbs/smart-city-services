@@ -161,7 +161,20 @@ export const getCustomerBookings = async (req, res) => {
       WHERE b.customer_id = $1
       ORDER BY b.booking_date DESC
     `, [customerId]);
-    res.json(bookings.rows);
+
+    const serviceRates = { 'Electrician': 200, 'Plumber': 150, 'Painter': 150, 'Construction Worker': 100, 'Maintenance Worker': 100 };
+    const processed = bookings.rows.map(b => {
+      if (!b.total_price || parseFloat(b.total_price) <= 0) {
+        const start = new Date(b.start_time);
+        const end = new Date(b.end_time);
+        const duration = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
+        const rate = serviceRates[b.category] || serviceRates[b.requested_category] || 100;
+        const fee = b.priority === 'Emergency' ? 600 : 0;
+        b.total_price = (rate * duration) + fee;
+      }
+      return b;
+    });
+    res.json(processed);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -194,7 +207,19 @@ export const getWorkerBookings = async (req, res) => {
         b.booking_date DESC
     `, [worker.category]);
 
-    res.json([...openRequests.rows, ...bookings.rows]);
+    const serviceRates = { 'Electrician': 200, 'Plumber': 150, 'Painter': 150, 'Construction Worker': 100, 'Maintenance Worker': 100 };
+    const allJobs = [...openRequests.rows, ...bookings.rows].map(b => {
+      if (!b.total_price || parseFloat(b.total_price) <= 0) {
+        const start = new Date(b.start_time);
+        const end = new Date(b.end_time);
+        const duration = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
+        const rate = serviceRates[b.requested_category] || 100;
+        const fee = b.priority === 'Emergency' ? 600 : 0;
+        b.total_price = (rate * duration) + fee;
+      }
+      return b;
+    });
+    res.json(allJobs);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -281,37 +306,52 @@ export const updateBookingStatus = async (req, res) => {
     const updateQuery = status === 'Completed'
       ? 'UPDATE Bookings SET status = $1, end_time = NOW() WHERE id = $2'
       : 'UPDATE Bookings SET status = $1 WHERE id = $2';
+    
+    if (status === 'Completed' && req.user.role !== 'Worker') {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Only the service professional can certify job completion and trigger payout.' });
+    }
+    
     await client.query(updateQuery, [status, id]);
 
     if (status === 'Completed') {
       const bookingRes = await client.query(`
-        SELECT b.worker_id, w.category as service_type
+        SELECT b.*, w.category as service_type
         FROM Bookings b
         JOIN Workers w ON b.worker_id = w.id
         WHERE b.id = $1
       `, [id]);
-      const booking = bookingRes.rows[0];
+      const bookingData = bookingRes.rows[0];
 
-      if (booking) {
+      if (bookingData) {
         // Record job history
         await client.query(`
           INSERT INTO job_history (worker_id, booking_id, service_type)
           VALUES ($1, $2, $3)
           ON CONFLICT DO NOTHING
-        `, [booking.worker_id, id, booking.service_type]);
+        `, [bookingData.worker_id, id, bookingData.service_type]);
+
+        // Calculate a safe price if missing
+        let finalizedPrice = bookingData.total_price;
+        if (!finalizedPrice || parseFloat(finalizedPrice) <= 0) {
+           const sRates = { 'Electrician': 200, 'Plumber': 150, 'Painter': 150, 'Construction Worker': 100, 'Maintenance Worker': 100 };
+           const sTime = new Date(bookingData.start_time);
+           const eTime = new Date(bookingData.end_time);
+           const durH = Math.max(1, Math.ceil((eTime - sTime) / (1000 * 60 * 60)));
+           const r = sRates[bookingData.service_type] || 100;
+           finalizedPrice = (durH * r) + (bookingData.priority === 'Emergency' ? 600 : 0);
+        }
 
         // Mock Payment Processing
-        const paymentRes = await client.query(`
+        await client.query(`
           INSERT INTO payments (booking_id, customer_id, worker_id, amount, status)
           VALUES ($1, $2, $3, $4, 'Completed')
-          RETURNING transaction_id
-        `, [id, bookingQuery.rows[0].customer_id, booking.worker_id, bookingQuery.rows[0].total_price]);
-
-        const transId = paymentRes.rows[0].transaction_id;
+          ON CONFLICT DO NOTHING
+        `, [id, bookingData.customer_id, bookingData.worker_id, finalizedPrice]);
 
         // Add trust score and stats update
-        const totalAcceptedRes = await client.query(`SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status != 'Pending'`, [booking.worker_id]);
-        const totalCompletedRes = await client.query(`SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status = 'Completed'`, [booking.worker_id]);
+        const totalAcceptedRes = await client.query(`SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status != 'Pending'`, [bookingData.worker_id]);
+        const totalCompletedRes = await client.query(`SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status = 'Completed'`, [bookingData.worker_id]);
         
         const totalAccepted = parseInt(totalAcceptedRes.rows[0].count) || 1;
         const totalCompleted = parseInt(totalCompletedRes.rows[0].count) || 0;
@@ -323,7 +363,7 @@ export const updateBookingStatus = async (req, res) => {
           UPDATE Workers 
           SET total_jobs = $1, completion_rate = $2, trust_score = LEAST(trust_score + $3, 100)
           WHERE id = $4
-        `, [totalCompleted, completionRate, trustChange, booking.worker_id]);
+        `, [totalCompleted, completionRate, trustChange, bookingData.worker_id]);
       }
     } else if (status === 'Cancelled') {
       await client.query('UPDATE worker_alerts SET is_active = FALSE, status = $1 WHERE booking_id = $2', ['Read', id]);
