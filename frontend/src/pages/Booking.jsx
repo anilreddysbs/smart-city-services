@@ -36,7 +36,7 @@ function Booking() {
     const durationHours = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
     const category = worker?.category || selectedCategory;
     const rate = serviceRates[category] || 0;
-    const emergencyFee = form.priority === 'Emergency' ? 500 : 0;
+    const emergencyFee = form.priority === 'Emergency' ? 600 : 0;
     return (rate * durationHours) + emergencyFee;
   };
 

@@ -67,7 +67,7 @@ export const createBooking = async (req, res) => {
     }
 
     const priorityNormalized = priority === 'Emergency' ? 'Emergency' : 'Normal';
-    const emergencyFee = priorityNormalized === 'Emergency' ? 500 : 0;
+    const emergencyFee = priorityNormalized === 'Emergency' ? 600 : 0;
     const dueBy = priorityNormalized === 'Emergency'
       ? new Date(new Date(start).setHours(23, 59, 59, 999))
       : end;
