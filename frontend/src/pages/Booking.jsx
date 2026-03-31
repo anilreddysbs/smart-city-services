@@ -19,6 +19,7 @@ function Booking() {
     customer_longitude: null
   });
   const [geoStatus, setGeoStatus] = useState('idle');
+  const [selectedCategory, setSelectedCategory] = useState('Electrician');
 
   const serviceRates = {
     'Electrician': 200,
