@@ -12,6 +12,7 @@ import analyticsRoutes from './routes/analyticsRoutes.js';
 import alertRoutes from './routes/alertRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import performanceRoutes from './routes/performanceRoutes.js';
+import communityRoutes from './routes/communityRoutes.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
@@ -36,6 +37,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/alerts', alertRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/performance', performanceRoutes);
+app.use('/api/community', communityRoutes);
 
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '../frontend/dist')));

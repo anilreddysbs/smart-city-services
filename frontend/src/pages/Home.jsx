@@ -85,7 +85,7 @@ function Home() {
               <h2 style={{ fontSize: '2.5rem', fontWeight: '900', marginBottom: '1.5rem' }}>Join the SmartCity Network</h2>
               <p style={{ fontSize: '1.1rem', color: 'var(--text-muted)', marginBottom: '2rem' }}>Are you a professional looking to grow your business? Join thousands of experts who trust SmartCity to connect with local customers.</p>
               <div style={{ display: 'flex', gap: '1rem' }}>
-                 <Link to="/register" className="btn">Register as Professional</Link>
+                 <Link to="/community" className="btn">Share Your Story</Link>
                  <Link to="/workers" className="btn btn-outline">Explore Directory</Link>
               </div>
            </div>

@@ -95,43 +95,6 @@ function Login() {
                <span style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>Protected Administrative Entry Node</span>
              )}
            </p>
-
-           {isAdminPortal && (
-              <div style={{ marginTop: '1rem', padding: '1.25rem', background: 'var(--primary-light)', borderRadius: '8px', border: '1px solid var(--primary)' }}>
-                <p style={{ fontSize: '0.8rem', color: 'var(--primary)', fontWeight: '800', marginBottom: '1rem' }}>FIRST TIME SETUP?</p>
-                <button 
-                  onClick={async () => {
-                    setLoading(true);
-                    try {
-                      await api.post('/auth/register', {
-                        name: 'System Admin',
-                        email: 'admin@smartcity.com',
-                        password: 'admin123',
-                        confirmPassword: 'admin123',
-                        role: 'Admin',
-                        phone: '0000',
-                        location: 'HQ'
-                      });
-                    } catch(e) {}
-                    try {
-                      const res = await api.post('/auth/login', { email: 'admin@smartcity.com', password: 'admin123' });
-                      localStorage.setItem('token', res.data.token);
-                      localStorage.setItem('user', JSON.stringify(res.data.user));
-                      navigate('/dashboard/admin');
-                    } catch(err) {
-                      setError('Setup failed. Please use the /register link.');
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  className="btn" 
-                  style={{ width: '100%', fontSize: '0.85rem' }}
-                >
-                  Create & Access Admin Account
-                </button>
-                <p style={{ fontSize: '0.7rem', marginTop: '0.75rem', color: 'var(--text-light)' }}>Email: admin@smartcity.com | PIN: admin123</p>
-              </div>
-           )}
         </div>
       </div>
     </div>

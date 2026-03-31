@@ -20,6 +20,7 @@ import ProfilePage from './pages/ProfilePage';
 import DashboardLayout from './components/DashboardLayout';
 import WorkerProfile from './pages/WorkerProfile';
 import ForgotPassword from './pages/ForgotPassword';
+import Community from './pages/Community';
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<OptionalDashboardLayout><Home /></OptionalDashboardLayout>} />
+          <Route path="/community" element={<OptionalDashboardLayout><Community /></OptionalDashboardLayout>} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -49,21 +49,16 @@ function Register() {
           <div className="form-group">
             <label>I am signing up as a...</label>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-               <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '1.25rem', border: formData.role === 'Customer' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: formData.role === 'Customer' ? 'var(--primary-light)' : 'white', transition: 'all 0.2s' }}>
-                 <input type="radio" name="role" value="Customer" checked={formData.role === 'Customer'} onChange={handleChange} style={{ display: 'none' }} />
-                 <FaUser size={24} color={formData.role === 'Customer' ? 'var(--primary)' : 'var(--text-light)'} />
-                 <span style={{ fontWeight: '800', color: formData.role === 'Customer' ? 'var(--primary)' : 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Citizen / Client</span>
-               </label>
+                <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '1.25rem', border: formData.role === 'Customer' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: formData.role === 'Customer' ? 'var(--primary-light)' : 'white', transition: 'all 0.2s' }}>
+                  <input type="radio" name="role" value="Customer" checked={formData.role === 'Customer'} onChange={handleChange} style={{ display: 'none' }} />
+                  <FaUser size={24} color={formData.role === 'Customer' ? 'var(--primary)' : 'var(--text-light)'} />
+                  <span style={{ fontWeight: '800', color: formData.role === 'Customer' ? 'var(--primary)' : 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Citizen / Client</span>
+                </label>
                 <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '1.25rem', border: formData.role === 'Worker' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: formData.role === 'Worker' ? 'var(--primary-light)' : 'white', transition: 'all 0.2s' }}>
-                 <input type="radio" name="role" value="Worker" checked={formData.role === 'Worker'} onChange={handleChange} style={{ display: 'none' }} />
-                 <FaHardHat size={24} color={formData.role === 'Worker' ? 'var(--primary)' : 'var(--text-light)'} />
-                 <span style={{ fontWeight: '800', color: formData.role === 'Worker' ? 'var(--primary)' : 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Professional</span>
-               </label>
-               <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '1.25rem', border: formData.role === 'Admin' ? '2px solid var(--primary)' : '1px solid var(--border)', borderRadius: '8px', cursor: 'pointer', background: formData.role === 'Admin' ? 'var(--primary-light)' : 'white', transition: 'all 0.2s', gridColumn: 'span 2' }}>
-                 <input type="radio" name="role" value="Admin" checked={formData.role === 'Admin'} onChange={handleChange} style={{ display: 'none' }} />
-                 <FaLock size={24} color={formData.role === 'Admin' ? 'var(--primary)' : 'var(--text-light)'} />
-                 <span style={{ fontWeight: '800', color: formData.role === 'Admin' ? 'var(--primary)' : 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase' }}>System Admin</span>
-               </label>
+                  <input type="radio" name="role" value="Worker" checked={formData.role === 'Worker'} onChange={handleChange} style={{ display: 'none' }} />
+                  <FaHardHat size={24} color={formData.role === 'Worker' ? 'var(--primary)' : 'var(--text-light)'} />
+                  <span style={{ fontWeight: '800', color: formData.role === 'Worker' ? 'var(--primary)' : 'var(--text-muted)', fontSize: '0.85rem', textTransform: 'uppercase' }}>Professional</span>
+                </label>
             </div>
           </div>
 

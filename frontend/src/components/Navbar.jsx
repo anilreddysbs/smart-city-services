@@ -46,7 +46,7 @@ function Navbar() {
         }}>
           Professionals
         </Link>
-        <Link to="/" style={{ color: isActive('/') ? 'var(--primary)' : 'var(--text-muted)' }}>
+        <Link to="/community" style={{ color: isActive('/community') ? 'var(--primary)' : 'var(--text-muted)' }}>
           Community
         </Link>
         
