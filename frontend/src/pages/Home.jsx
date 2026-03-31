@@ -44,19 +44,37 @@ function Home() {
       </section>
 
       {/* Main Content */}
-      <main className="container" style={{ marginTop: '4rem' }}>
+      <main className="container" style={{ marginTop: '5rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
-           <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '1rem' }}>Expertise for every urban challenge</h2>
-           <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Select a category to view the top-rated professionals in your city.</p>
+           <h2 style={{ fontSize: '2.25rem', fontWeight: '900', color: 'rgb(30, 41, 59)', marginBottom: '1rem' }}>Popular Services</h2>
+           <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>Get connected with the top professionals in these high-demand categories.</p>
         </div>
 
-        <div className="grid">
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', flexWrap: 'wrap', marginBottom: '6rem' }}>
           {services.map((service, idx) => (
-            <div key={idx} className="card" style={{ cursor: 'pointer', textAlign: 'center', alignItems: 'center' }} onClick={() => navigate(`/workers?category=${encodeURIComponent(service.name)}`)}>
-               <div style={{ fontSize: '2.5rem', marginBottom: '1rem', opacity: 0.8 }}>{service.icon}</div>
-               <h3 className="card-title">{service.name}</h3>
-               <p style={{ color: 'var(--text-light)', fontSize: '0.9rem' }}>Verified professionals with average 4.8/5 rating.</p>
-               <div style={{ marginTop: '1.5rem', fontWeight: '700', color: 'var(--secondary)' }}>View Professionals &rarr;</div>
+            <div key={idx} 
+                 className="card" 
+                 style={{ 
+                   cursor: 'pointer', 
+                   textAlign: 'center', 
+                   alignItems: 'center', 
+                   minWidth: '200px', 
+                   transition: 'transform 0.2s, box-shadow 0.2s',
+                   padding: '2rem 1.5rem'
+                 }} 
+                 onClick={() => navigate(`/workers?category=${encodeURIComponent(service.name)}`)}
+                 onMouseEnter={(e) => {
+                   e.currentTarget.style.transform = 'translateY(-8px)';
+                   e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+                 }}
+                 onMouseLeave={(e) => {
+                   e.currentTarget.style.transform = 'translateY(0)';
+                   e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                 }}
+            >
+               <div style={{ fontSize: '2.5rem', marginBottom: '1.25rem' }}>{service.icon}</div>
+               <h3 className="card-title" style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{service.name}</h3>
+               <div style={{ fontSize: '0.85rem', fontWeight: '700', color: 'var(--primary)', marginTop: 'auto' }}>Browse &rarr;</div>
             </div>
           ))}
         </div>
