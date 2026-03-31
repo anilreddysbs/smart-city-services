@@ -133,17 +133,7 @@ async function seedTempProfiles() {
       await client.query(
         `INSERT INTO Workers (user_id, category, experience, location, verification_status, latitude, longitude, trust_score, total_jobs, completion_rate, disputes)
          VALUES ($1, $2, $3, $4, 'Verified', $5, $6, $7, $8, $9, $10)
-         ON CONFLICT (user_id) DO UPDATE
-         SET category = EXCLUDED.category,
-             experience = EXCLUDED.experience,
-             location = EXCLUDED.location,
-             verification_status = EXCLUDED.verification_status,
-             latitude = EXCLUDED.latitude,
-             longitude = EXCLUDED.longitude,
-             trust_score = EXCLUDED.trust_score,
-             total_jobs = EXCLUDED.total_jobs,
-             completion_rate = EXCLUDED.completion_rate,
-             disputes = EXCLUDED.disputes`,
+         ON CONFLICT DO NOTHING`,
         [
           userId,
           category,
@@ -155,6 +145,33 @@ async function seedTempProfiles() {
           randInt(8, 45),
           randFloat(82, 99, 2),
           randInt(0, 3)
+        ]
+      );
+
+      await client.query(
+        `UPDATE Workers
+         SET category = $1,
+             experience = $2,
+             location = $3,
+             verification_status = 'Verified',
+             latitude = $4,
+             longitude = $5,
+             trust_score = $6,
+             total_jobs = $7,
+             completion_rate = $8,
+             disputes = $9
+         WHERE user_id = $10`,
+        [
+          category,
+          experience,
+          location,
+          latitude,
+          longitude,
+          randFloat(65, 95, 2),
+          randInt(8, 45),
+          randFloat(82, 99, 2),
+          randInt(0, 3),
+          userId
         ]
       );
 
