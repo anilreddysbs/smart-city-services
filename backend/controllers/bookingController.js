@@ -123,7 +123,7 @@ export const createBooking = async (req, res) => {
       success: true,
       data: result.rows[0],
       message: 'Booking request broadcasted successfully',
-      alerted_workers: workersRes.rows.length
+      alerted_workers: workersToAlert.length
     });
   } catch (err) {
     await client.query('ROLLBACK');
