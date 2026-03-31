@@ -37,6 +37,25 @@ const PrivateRoute = ({ children, role }) => {
 };
 
 function App() {
+  const isAdminPortal = import.meta.env.VITE_ADMIN_PORTAL === 'true';
+
+  if (isAdminPortal) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/dashboard/admin" element={<PrivateRoute role="Admin"><DashboardLayout><AdminDashboard /></DashboardLayout></PrivateRoute>} />
+            <Route path="/dashboard/admin/analytics" element={<PrivateRoute role="Admin"><DashboardLayout><AnalyticsDashboard /></DashboardLayout></PrivateRoute>} />
+            <Route path="*" element={<Navigate to="/login" />} />
+          </Routes>
+          <ToastContainer position="bottom-right" autoClose={3000} theme="colored" />
+        </Router>
+      </QueryClientProvider>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
@@ -51,11 +70,11 @@ function App() {
           <Route path="/worker/:id" element={<OptionalDashboardLayout><WorkerProfile /></OptionalDashboardLayout>} />
           <Route path="/dashboard/customer" element={<PrivateRoute role="Customer"><DashboardLayout><CustomerDashboard /></DashboardLayout></PrivateRoute>} />
           <Route path="/dashboard/worker" element={<PrivateRoute role="Worker"><DashboardLayout><WorkerDashboard /></DashboardLayout></PrivateRoute>} />
-          <Route path="/dashboard/admin" element={<PrivateRoute role="Admin"><DashboardLayout><AdminDashboard /></DashboardLayout></PrivateRoute>} />
-          <Route path="/dashboard/admin/analytics" element={<PrivateRoute role="Admin"><DashboardLayout><AnalyticsDashboard /></DashboardLayout></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><DashboardLayout><ProfilePage /></DashboardLayout></PrivateRoute>} />
           <Route path="/dashboard/worker/performance" element={<PrivateRoute role="Worker"><DashboardLayout><WorkerPerformanceDashboard /></DashboardLayout></PrivateRoute>} />
           <Route path="/dashboard/customer/subscriptions" element={<PrivateRoute role="Customer"><DashboardLayout><CommunitySubscriptionsPage /></DashboardLayout></PrivateRoute>} />
+          {/* Main portal doesn't show admin dashboard publicly */}
+          <Route path="/dashboard/admin/*" element={<Navigate to="/login" />} />
         </Routes>
         <ToastContainer position="bottom-right" autoClose={3000} theme="colored" />
       </Router>

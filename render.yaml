@@ -1,13 +1,35 @@
 services:
+  # Main Public Marketplace (Customers & Workers)
   - type: web
     name: smart-city-services
     env: node
     plan: free
-    buildCommand: "npm --prefix frontend install && npm --prefix frontend run build && npm --prefix backend install"
+    buildCommand: "npm --prefix frontend install && export VITE_ADMIN_PORTAL=false && npm --prefix frontend run build && npm --prefix backend install"
     startCommand: "node backend/init_db.mjs && node backend/migrate_v2.mjs && node backend/migrate_v3.mjs && node backend/migrate_v4.mjs && node backend/migrate_v5.mjs && node backend/migrate_v6.mjs && node backend/migrate_v7.mjs && node backend/migrate_v8.mjs && node backend/server.js"
     envVars:
       - key: NODE_ENV
         value: production
+      - key: VITE_ADMIN_PORTAL
+        value: "false"
+      - key: POSTGRES_URL
+        fromDatabase:
+          name: smart-city-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+
+  # Dedicated Admin Management Hub
+  - type: web
+    name: smart-city-admin
+    env: node
+    plan: free
+    buildCommand: "npm --prefix frontend install && export VITE_ADMIN_PORTAL=true && npm --prefix frontend run build && npm --prefix backend install"
+    startCommand: "node backend/server.js" # No migrations on admin service to avoid dual conflicts
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_ADMIN_PORTAL
+        value: "true"
       - key: POSTGRES_URL
         fromDatabase:
           name: smart-city-db
