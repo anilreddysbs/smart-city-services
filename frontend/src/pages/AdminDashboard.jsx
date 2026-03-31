@@ -13,6 +13,11 @@ function AdminDashboard() {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [dismissedIds, setDismissedIds] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    name: '', email: '', phone: '', password: '', role: 'Customer',
+    category: 'Electrician', experience: '0', location: ''
+  });
 
   useEffect(() => {
     fetchData();
@@ -86,7 +91,29 @@ function AdminDashboard() {
     }
   };
 
+  const handleCreateUser = async (e) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    try {
+      await api.post('/auth/register', newUserData);
+      toast.success(`Protocol initiated: Registered ${newUserData.role} successfully.`);
+      setShowCreateModal(false);
+      setNewUserData({ name: '', email: '', phone: '', password: '', role: 'Customer', category: 'Electrician', experience: '0', location: '' });
+      fetchData();
+    } catch (err) {
+      toast.error('Network identity allocation failed.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const activeFlagged = flaggedWorkers.filter(w => !dismissedIds.includes(w.id));
+
+  const filteredUsers = users.filter(u => 
+    u.email.toLowerCase().includes(search.toLowerCase()) || 
+    u.role.toLowerCase().includes(search.toLowerCase()) ||
+    u.name.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="container" style={{ padding: '2rem' }}>
@@ -162,18 +189,68 @@ function AdminDashboard() {
 
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <h2 style={{ margin: 0 }}>All Users</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+            <h2 style={{ margin: 0 }}>All Users</h2>
+            <button 
+              onClick={() => setShowCreateModal(true)} 
+              className="btn btn-secondary" 
+              style={{ padding: '0.45rem 1.25rem', height: 'fit-content', borderRadius: '8px', fontSize: '0.9rem', fontWeight: 'bold' }}
+            >
+              + Register New Node
+            </button>
+          </div>
           <div style={{ position: 'relative', minWidth: '300px' }}>
             <FaSearch style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
             <input 
               type="text" 
-              placeholder="Search by Email or Role..."
+              placeholder="Search by name, email or role..."
               value={search}
               onChange={e => setSearch(e.target.value)}
               style={{ width: '100%', padding: '0.65rem 1rem 0.65rem 2.8rem', border: '1px solid var(--border)', borderRadius: '6px' }}
             />
           </div>
         </div>
+
+        {showCreateModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+             <div className="card" style={{ width: '100%', maxWidth: '500px', padding: '2rem', animation: 'slideUp 0.3s' }}>
+                <h2 style={{ marginBottom: '1.5rem' }}>Provision New Identity</h2>
+                <form onSubmit={handleCreateUser} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                   <div style={{ display: 'flex', gap: '1rem' }}>
+                      <select name="role" value={newUserData.role} onChange={e => setNewUserData({...newUserData, role: e.target.value})} style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)', fontWeight: 'bold' }}>
+                         <option value="Customer">Customer</option>
+                         <option value="Worker">Professional</option>
+                         <option value="Admin">System Admin</option>
+                      </select>
+                      <input type="text" placeholder="Full Name" value={newUserData.name} onChange={e => setNewUserData({...newUserData, name: e.target.value})} required style={{ flex: 1.5, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                   </div>
+                   <input type="email" placeholder="Email Address" value={newUserData.email} onChange={e => setNewUserData({...newUserData, email: e.target.value })} required style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                   <input type="text" placeholder="Phone Number" value={newUserData.phone} onChange={e => setNewUserData({...newUserData, phone: e.target.value })} required style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                   <input type="password" placeholder="Temporal Password" value={newUserData.password} onChange={e => setNewUserData({...newUserData, password: e.target.value })} required style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                   
+                   {newUserData.role === 'Worker' && (
+                     <div style={{ display: 'flex', gap: '1rem' }}>
+                        <select value={newUserData.category} onChange={e => setNewUserData({...newUserData, category: e.target.value})} style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                           <option value="Electrician">Electrician</option>
+                           <option value="Plumber">Plumber</option>
+                           <option value="Painter">Painter</option>
+                           <option value="Construction Worker">Construction Worker</option>
+                        </select>
+                        <input type="number" placeholder="Exp (Yrs)" value={newUserData.experience} onChange={e => setNewUserData({...newUserData, experience: e.target.value})} style={{ width: '80px', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                     </div>
+                   )}
+
+                   <input type="text" placeholder="Assigned Location" value={newUserData.location} onChange={e => setNewUserData({...newUserData, location: e.target.value })} required style={{ padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }} />
+                   
+                   <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                      <button type="button" onClick={() => setShowCreateModal(false)} style={{ flex: 1, height: '48px', borderRadius: '8px', border: '1.5px solid var(--border)', background: 'white', fontWeight: 'bold', cursor: 'pointer' }}>Cancel</button>
+                      <button disabled={isProcessing} type="submit" className="btn" style={{ flex: 2, height: '48px', borderRadius: '8px', fontWeight: 'bold' }}>{isProcessing ? 'Deploying...' : 'Provision Resource'}</button>
+                   </div>
+                </form>
+             </div>
+          </div>
+        )}
+
         <div style={{ overflowX: 'auto', background: 'white', borderRadius: '8px', border: '1px solid var(--border)' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
