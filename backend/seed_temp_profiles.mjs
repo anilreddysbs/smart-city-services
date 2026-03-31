@@ -74,6 +74,23 @@ async function seedTempProfiles() {
   try {
     await client.query('BEGIN');
 
+    // Clean old temp seed data first to avoid duplicates across re-runs.
+    // Deleting temp users cascades to workers/customers, bookings, ratings,
+    // job history, certifications, alerts, subscriptions, and community posts.
+    await client.query(
+      `DELETE FROM Users
+       WHERE email LIKE 'temp.worker%@smartcity.local'
+          OR email LIKE 'temp.customer%@smartcity.local'`
+    );
+
+    // Remove seeded analytics rows tied to the temporary location pool.
+    await client.query(
+      `DELETE FROM service_demand_stats
+       WHERE service_category = ANY($1::text[])
+         AND location = ANY($2::text[])`,
+      [workerCategories, [...workerLocations, ...customerLocations]]
+    );
+
     // Ensure all core services exist with stable IDs.
     for (const serviceName of workerCategories) {
       await client.query(
@@ -116,7 +133,17 @@ async function seedTempProfiles() {
       await client.query(
         `INSERT INTO Workers (user_id, category, experience, location, verification_status, latitude, longitude, trust_score, total_jobs, completion_rate, disputes)
          VALUES ($1, $2, $3, $4, 'Verified', $5, $6, $7, $8, $9, $10)
-         ON CONFLICT DO NOTHING`,
+         ON CONFLICT (user_id) DO UPDATE
+         SET category = EXCLUDED.category,
+             experience = EXCLUDED.experience,
+             location = EXCLUDED.location,
+             verification_status = EXCLUDED.verification_status,
+             latitude = EXCLUDED.latitude,
+             longitude = EXCLUDED.longitude,
+             trust_score = EXCLUDED.trust_score,
+             total_jobs = EXCLUDED.total_jobs,
+             completion_rate = EXCLUDED.completion_rate,
+             disputes = EXCLUDED.disputes`,
         [
           userId,
           category,
@@ -131,13 +158,6 @@ async function seedTempProfiles() {
         ]
       );
 
-      await client.query(
-        `UPDATE Workers
-         SET category = $1, experience = $2, location = $3, verification_status = 'Verified',
-             latitude = $4, longitude = $5
-         WHERE user_id = $6`,
-        [category, experience, location, latitude, longitude, userId]
-      );
     }
 
     for (let i = 0; i < customerLocations.length; i += 1) {
@@ -170,15 +190,11 @@ async function seedTempProfiles() {
       await client.query(
         `INSERT INTO Customers (user_id, location, latitude, longitude)
          VALUES ($1, $2, $3, $4)
-         ON CONFLICT (user_id) DO NOTHING`,
+         ON CONFLICT (user_id) DO UPDATE
+         SET location = EXCLUDED.location,
+             latitude = EXCLUDED.latitude,
+             longitude = EXCLUDED.longitude`,
         [userId, location, latitude, longitude]
-      );
-
-      await client.query(
-        `UPDATE Customers
-         SET location = $1, latitude = $2, longitude = $3
-         WHERE user_id = $4`,
-        [location, latitude, longitude, userId]
       );
     }
 
