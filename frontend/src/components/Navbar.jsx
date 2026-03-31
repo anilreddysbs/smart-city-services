@@ -52,17 +52,15 @@ function Navbar() {
       {/* Nav Links — role-aware */}
       <div className="navbar-links">
 
-        {/* Not a worker: show Professionals directory */}
-        {!isWorker && (
-          <div style={{ display: 'flex', gap: '1.25rem' }}>
-            <Link to="/workers" style={{ color: isActive('/workers') ? 'var(--primary)' : 'var(--text-muted)', fontWeight: '600', fontSize: '0.92rem' }}>
-              Professionals
-            </Link>
-            <Link to="/book" style={{ color: isActive('/book') ? 'var(--primary)' : 'var(--text-muted)', fontWeight: '600', fontSize: '0.92rem' }}>
-              Book Service
-            </Link>
-          </div>
-        )}
+        {/* Global links available to both Customers and Workers (for dual-role bookings) */}
+        <div style={{ display: 'flex', gap: '1.25rem' }}>
+          <Link to="/workers" style={{ color: isActive('/workers') ? 'var(--primary)' : 'var(--text-muted)', fontWeight: '600', fontSize: '0.92rem' }}>
+            Professionals
+          </Link>
+          <Link to="/book" style={{ color: isActive('/book') ? 'var(--primary)' : 'var(--text-muted)', fontWeight: '600', fontSize: '0.92rem' }}>
+            Book Service
+          </Link>
+        </div>
 
         {/* Worker shortcut: go straight to their dashboard */}
         {isWorker && (
