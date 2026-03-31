@@ -24,7 +24,7 @@ export const register = async (req, res) => {
       if (role === 'Worker') {
         await client.query(
           'INSERT INTO Workers (user_id, category, experience, location, verification_status, latitude, longitude) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-          [userId, category, experience, location, 'Pending', latitude, longitude]
+          [userId, category, experience, location, 'Verified', latitude, longitude]
         );
       } else if (role === 'Customer') {
         await client.query('INSERT INTO Customers (user_id, location, latitude, longitude) VALUES ($1, $2, $3, $4)', [userId, location || '', latitude, longitude]);
