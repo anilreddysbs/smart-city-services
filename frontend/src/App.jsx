@@ -30,11 +30,21 @@ const OptionalDashboardLayout = ({ children }) => {
 };
 
 const PrivateRoute = ({ children, role }) => {
+  const isAdminPortal = import.meta.env.VITE_ADMIN_PORTAL === 'true';
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || 'null');
   if (!token) return <Navigate to="/login" />;
-  if (role && user?.role !== role) return <Navigate to="/" />;
+  // In admin portal: wrong role → back to login to avoid catch-all loop
+  if (role && user?.role !== role) return <Navigate to={isAdminPortal ? '/login' : '/'} />;
   return children;
+};
+
+// Smart guard for admin portal root: redirects logged-in admins to their dashboard
+const AdminPortalGuard = () => {
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  if (token && user?.role === 'Admin') return <Navigate to="/dashboard/admin" replace />;
+  return <Navigate to="/login" replace />;
 };
 
 function App() {
@@ -45,12 +55,15 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <Router>
           <Routes>
-            <Route path="/" element={<Navigate to="/login" />} />
+            {/* If already logged in as admin, go straight to dashboard */}
+            <Route path="/" element={<AdminPortalGuard />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
             <Route path="/dashboard/admin" element={<PrivateRoute role="Admin"><DashboardLayout><AdminDashboard /></DashboardLayout></PrivateRoute>} />
             <Route path="/dashboard/admin/analytics" element={<PrivateRoute role="Admin"><DashboardLayout><AnalyticsDashboard /></DashboardLayout></PrivateRoute>} />
-            <Route path="*" element={<Navigate to="/login" />} />
+            {/* Profile page — needed so DashboardLayout sidebar link works */}
+            <Route path="/profile" element={<PrivateRoute role="Admin"><DashboardLayout><ProfilePage /></DashboardLayout></PrivateRoute>} />
+            {/* Catch all unknown routes → login */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
           <ToastContainer position="bottom-right" autoClose={3000} theme="colored" />
         </Router>

@@ -14,7 +14,9 @@ function DashboardLayout({ children }) {
       <aside className="sidebar">
         <nav className="sidebar-nav" style={{ padding: '1rem 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <div className="nav-section" style={{ display: 'none' }}>DISCOVER</div>
-          <Link to="/workers" title="Browse Professionals Directory" className={`nav-link ${isActive('/workers') ? 'active' : ''}`}><FaUserCheck /> <span className="nav-text">Find Workers</span></Link>
+          {user?.role !== 'Admin' && (
+            <Link to="/workers" title="Browse Professionals Directory" className={`nav-link ${isActive('/workers') ? 'active' : ''}`}><FaUserCheck /> <span className="nav-text">Find Workers</span></Link>
+          )}
 
           <div className="nav-section" style={{ marginTop: '1.5rem' }}>MY WORKSPACE</div>
           {user?.role === 'Customer' && (
