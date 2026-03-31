@@ -41,7 +41,9 @@ function DashboardLayout({ children }) {
         </nav>
       </aside>
       <main className="dashboard-content">
-        {children}
+        <div style={{ padding: '2.5rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+          {children}
+        </div>
       </main>
     </div>
   );
