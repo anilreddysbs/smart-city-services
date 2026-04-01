@@ -98,7 +98,8 @@ export const getWorkers = async (req, res, next) => {
 export const getWorkerById = async (req, res, next) => {
   try {
     const workersResult = await pool.query(`
-      SELECT w.id, u.name, w.category, w.experience, w.location, w.verification_status, u.phone, u.email 
+      SELECT w.id, u.name, w.category, w.experience, w.location, w.verification_status,
+             w.trust_score, w.total_jobs, w.completion_rate, u.phone, u.email
       FROM Workers w 
       JOIN Users u ON w.user_id = u.id 
       WHERE w.id = $1 AND w.is_deleted = false

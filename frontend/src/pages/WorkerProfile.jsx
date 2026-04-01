@@ -20,6 +20,10 @@ function WorkerProfile() {
     <Link to="/workers" className="btn btn-outline">Back to Directory</Link>
   </div>;
 
+  const trustScore = Number.isFinite(Number(worker.trust_score))
+    ? Math.round(Number(worker.trust_score))
+    : 0;
+
   return (
     <div className="container" style={{ maxWidth: '1000px', marginTop: '3rem' }}>
       <Link to="/workers" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', marginBottom: '2rem', color: 'var(--secondary)', fontWeight: '700', textDecoration: 'none' }}>
@@ -54,7 +58,7 @@ function WorkerProfile() {
                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
                   <FaShieldAlt color="var(--secondary)" /> Trust Score
                </div>
-               <div style={{ fontSize: '1.5rem', fontWeight: '900' }}>{worker.trust_score}%</div>
+               <div style={{ fontSize: '1.5rem', fontWeight: '900' }}>{trustScore}%</div>
              </div>
              <div style={{ padding: '1.5rem', background: 'var(--background-alt)', borderRadius: '8px', border: '1px solid var(--border-light)' }}>
                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-light)', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', marginBottom: '0.75rem' }}>
