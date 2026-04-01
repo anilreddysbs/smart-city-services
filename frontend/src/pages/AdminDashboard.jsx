@@ -48,15 +48,13 @@ function AdminDashboard() {
   };
 
   const updateWorkerStatus = async (workerId, status) => {
-    const label = status === 'Rejected' ? 'suspend' : 'reactivate';
-    if (!window.confirm(`Are you sure you want to ${label} this professional?`)) return;
     setIsProcessing(true);
     try {
       await api.put('/admin/verify-worker', { worker_id: workerId, status });
       toast.success(`Worker ${status === 'Rejected' ? 'suspended' : 'reactivated'} successfully.`);
       fetchData();
     } catch (err) {
-      toast.error('Action failed. Please try again.');
+      toast.error(err.response?.data?.error || 'Action failed. Please try again.');
     } finally {
       setIsProcessing(false);
     }
@@ -67,14 +65,13 @@ function AdminDashboard() {
       toast.error("You can't delete your own account.");
       return;
     }
-    if (!window.confirm(`Permanently delete ${targetUser.name} (${targetUser.email})? This cannot be undone.`)) return;
     setIsProcessing(true);
     try {
       await api.delete(`/admin/users/${targetUser.id}`);
       toast.success('User deleted successfully.');
       fetchData();
     } catch (err) {
-      toast.error('Failed to delete user.');
+      toast.error(err.response?.data?.error || 'Failed to delete user.');
     } finally {
       setIsProcessing(false);
     }
