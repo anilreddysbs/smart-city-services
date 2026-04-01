@@ -8,6 +8,7 @@ import api from '../services/api';
 function Booking() {
   const { workerId } = useParams();
   const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     description: '',
@@ -37,8 +38,15 @@ function Booking() {
         customer_latitude: form.customer_latitude,
         customer_longitude: form.customer_longitude
       });
-      toast.success(`Request sent to ${result.data?.alerted_workers || 0} workers. First accepter gets assigned.`);
-      navigate('/dashboard/customer');
+      const alertedWorkers = result.data?.alerted_workers || 0;
+
+      if (alertedWorkers === 0) {
+        toast.warn('Your request was created, but no verified workers match this category yet.');
+      } else {
+        toast.success(`Request sent to ${alertedWorkers} workers. The first available worker can accept it.`);
+      }
+
+      navigate(user?.role === 'Customer' ? '/dashboard/customer' : '/');
     } catch (err) {
       if (err.response?.status === 409) {
         toast.error('Schedule Conflict Block: Time slot dynamically occupied securely.');
@@ -134,7 +142,7 @@ function Booking() {
             </div>
             {form.priority === 'Emergency' && (
               <p style={{ fontSize: '0.85rem', color: 'var(--danger)', fontWeight: '700', marginTop: '0.75rem' }}>
-                Emergency jobs include priority handling and additional fee.
+                Emergency jobs include priority handling and a fixed Rs. 500 surcharge.
               </p>
             )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2.5rem' }}>
@@ -186,7 +194,7 @@ function Booking() {
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>End Time:</strong> {new Date(form.end_time).toLocaleString()}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Priority:</strong> {form.priority}</p>
                <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Location:</strong> {form.customer_location}</p>
-               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Est. Total Cost:</strong> {form.priority === 'Emergency' ? 'Higher (Emergency surcharge applies)' : 'Standard pricing'}</p>
+               <p style={{ margin: '0 0 0.75rem 0' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block' }}>Est. Total Cost:</strong> {form.priority === 'Emergency' ? 'Standard pricing + Rs. 500 emergency surcharge' : 'Standard pricing'}</p>
                <p style={{ margin: '0 0 0.75rem 0', display: 'flex', alignItems: 'flex-start' }}><strong style={{ color: 'var(--text-light)', minWidth: '130px', display: 'inline-block', flexShrink: 0 }}>Job Description:</strong> <span>{form.description}</span></p>
             </div>
 

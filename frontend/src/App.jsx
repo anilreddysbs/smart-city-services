@@ -26,15 +26,14 @@ import GoogleTranslateManager from './components/GoogleTranslateManager';
 const queryClient = new QueryClient();
 
 const OptionalDashboardLayout = ({ children }) => {
-  const token = localStorage.getItem('token');
-  return token ? <DashboardLayout>{children}</DashboardLayout> : children;
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  return user ? <DashboardLayout>{children}</DashboardLayout> : children;
 };
 
 const PrivateRoute = ({ children, role }) => {
   const isAdminPortal = import.meta.env.VITE_ADMIN_PORTAL === 'true';
-  const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || 'null');
-  if (!token) return <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" />;
   // In admin portal: wrong role → back to login to avoid catch-all loop
   if (role && user?.role !== role) return <Navigate to={isAdminPortal ? '/login' : '/'} />;
   return children;
@@ -42,9 +41,8 @@ const PrivateRoute = ({ children, role }) => {
 
 // Smart guard for admin portal root: redirects logged-in admins to their dashboard
 const AdminPortalGuard = () => {
-  const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || 'null');
-  if (token && user?.role === 'Admin') return <Navigate to="/dashboard/admin" replace />;
+  if (user?.role === 'Admin') return <Navigate to="/dashboard/admin" replace />;
   return <Navigate to="/login" replace />;
 };
 
@@ -84,7 +82,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/workers" element={<OptionalDashboardLayout><WorkerListing /></OptionalDashboardLayout>} />
-          <Route path="/book/:workerId" element={<PrivateRoute><DashboardLayout><Booking /></DashboardLayout></PrivateRoute>} />
+          <Route path="/book/:workerId" element={<PrivateRoute role="Customer"><DashboardLayout><Booking /></DashboardLayout></PrivateRoute>} />
           <Route path="/worker/:id" element={<OptionalDashboardLayout><WorkerProfile /></OptionalDashboardLayout>} />
           <Route path="/dashboard/customer" element={<PrivateRoute role="Customer"><DashboardLayout><CustomerDashboard /></DashboardLayout></PrivateRoute>} />
           <Route path="/dashboard/worker" element={<PrivateRoute role="Worker"><DashboardLayout><WorkerDashboard /></DashboardLayout></PrivateRoute>} />

@@ -102,8 +102,15 @@ function WorkerProfile() {
                          <FaClock /> Available for Hire
                       </div>
                    </div>
-                   {user ? (
+                   {user?.role === 'Customer' ? (
                      <Link to={`/book/${worker.id}`} className="btn" style={{ width: '100%', padding: '1rem', borderRadius: '4px', display: 'block' }}>Book Consultation</Link>
+                   ) : user ? (
+                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                       <Link to={user.role === 'Worker' ? '/dashboard/worker' : '/dashboard/admin'} className="btn btn-outline" style={{ width: '100%', padding: '1rem', borderRadius: '4px', display: 'block' }}>
+                         {user.role === 'Worker' ? 'Return to Worker Dashboard' : 'Return to Admin Dashboard'}
+                       </Link>
+                       <p style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>Only customer accounts can create bookings.</p>
+                     </div>
                    ) : (
                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                        <Link to="/login" className="btn btn-outline" style={{ width: '100%', padding: '1rem', borderRadius: '4px', display: 'block' }}>Login to Book</Link>

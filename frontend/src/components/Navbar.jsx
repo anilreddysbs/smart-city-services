@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { FaUserCircle, FaSignOutAlt, FaCity, FaBriefcase, FaCalendarAlt, FaComments, FaGlobe } from 'react-icons/fa';
+import api from '../services/api';
 
 function Navbar() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ function Navbar() {
   const [language, setLanguage] = React.useState(localStorage.getItem('ui_language') || 'en');
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    api.post('/auth/logout').catch(() => null);
     localStorage.removeItem('user');
     navigate('/login');
   };

@@ -1,5 +1,12 @@
 import pool from '../database.js';
 
+const parsePaging = (req) => {
+  const limit = Math.min(Math.max(Number.parseInt(req.query.limit || '20', 10) || 20, 1), 100);
+  const page = Math.max(Number.parseInt(req.query.page || '1', 10) || 1, 1);
+  const offset = (page - 1) * limit;
+  return { limit, page, offset };
+};
+
 export const createBooking = async (req, res) => {
   const {
     service_id,
@@ -39,20 +46,15 @@ export const createBooking = async (req, res) => {
       return res.status(400).json({ success: false, error: 'Requested category is invalid.' });
     }
 
-    let executing_customer_id;
-    const fallbackCheck = await client.query('SELECT id FROM Customers WHERE user_id = $1', [req.user.id]);
-    if (fallbackCheck.rows.length > 0) {
-        executing_customer_id = fallbackCheck.rows[0].id;
-    } else {
-        // Handled dynamic parallel race execution using ON CONFLICT logic boundaries natively
-        const newCustomerNode = await client.query(`
-            INSERT INTO Customers (user_id, location) 
-            VALUES ($1, $2) 
-            ON CONFLICT (user_id) DO UPDATE SET location = EXCLUDED.location 
-            RETURNING id
-        `, [req.user.id, 'Dual-Role Operations']);
-        executing_customer_id = newCustomerNode.rows[0].id;
+    const customerResult = await client.query(
+      'SELECT id FROM Customers WHERE user_id = $1',
+      [req.user.id]
+    );
+    if (customerResult.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ success: false, error: 'Only customer accounts can create bookings.' });
     }
+    const executing_customer_id = customerResult.rows[0].id;
 
     let computedServiceId = service_id;
     if (!computedServiceId) {
@@ -127,10 +129,17 @@ export const createBooking = async (req, res) => {
 
 export const getCustomerBookings = async (req, res) => {
   try {
+    const { limit, offset, page } = parsePaging(req);
     const customers = await pool.query('SELECT id FROM Customers WHERE user_id = $1', [req.user.id]);
-    if (customers.rows.length === 0) return res.json([]);
+    if (customers.rows.length === 0) {
+      return res.json({
+        data: [],
+        pagination: { page, limit, total: 0 }
+      });
+    }
     const customerId = customers.rows[0].id;
 
+    const totalResult = await pool.query('SELECT COUNT(*)::int AS total FROM Bookings WHERE customer_id = $1', [customerId]);
     const bookings = await pool.query(`
       SELECT
              b.*,
@@ -143,8 +152,12 @@ export const getCustomerBookings = async (req, res) => {
       LEFT JOIN Ratings r ON b.id = r.booking_id
       WHERE b.customer_id = $1
       ORDER BY b.booking_date DESC
-    `, [customerId]);
-    res.json(bookings.rows);
+      LIMIT $2 OFFSET $3
+    `, [customerId, limit, offset]);
+    res.json({
+      data: bookings.rows,
+      pagination: { page, limit, total: totalResult.rows[0].total }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -152,9 +165,27 @@ export const getCustomerBookings = async (req, res) => {
 
 export const getWorkerBookings = async (req, res) => {
   try {
+    const { limit, offset, page } = parsePaging(req);
     const workers = await pool.query('SELECT id, category FROM Workers WHERE user_id = $1', [req.user.id]);
     if (workers.rows.length === 0) return res.status(404).json({ message: 'Worker not found' });
     const worker = workers.rows[0];
+
+    const totalResult = await pool.query(`
+      SELECT COUNT(*)::int AS total
+      FROM (
+        SELECT b.id
+        FROM Bookings b
+        WHERE b.worker_id = $1
+        UNION
+        SELECT b.id
+        FROM Bookings b
+        JOIN worker_alerts a ON a.booking_id = b.id
+        WHERE a.worker_id = $1
+          AND a.is_active = TRUE
+          AND b.worker_id IS NULL
+          AND b.status = 'Pending'
+      ) combined
+    `, [worker.id]);
 
     const bookings = await pool.query(`
       SELECT b.*, u.name as customer_name, u.phone as customer_phone
@@ -167,17 +198,27 @@ export const getWorkerBookings = async (req, res) => {
     const openRequests = await pool.query(`
       SELECT b.*, u.name as customer_name, u.phone as customer_phone
       FROM Bookings b
+      JOIN worker_alerts a ON a.booking_id = b.id
       JOIN Customers c ON b.customer_id = c.id
       JOIN Users u ON c.user_id = u.id
-      WHERE b.worker_id IS NULL
+      WHERE a.worker_id = $1
+        AND a.is_active = TRUE
+        AND b.worker_id IS NULL
         AND b.status = 'Pending'
-        AND b.requested_category = $1
+        AND b.requested_category = $2
       ORDER BY
         CASE WHEN b.priority = 'Emergency' THEN 0 ELSE 1 END,
         b.booking_date DESC
-    `, [worker.category]);
+    `, [worker.id, worker.category]);
 
-    res.json([...openRequests.rows, ...bookings.rows]);
+    const combined = [...openRequests.rows, ...bookings.rows]
+      .sort((left, right) => new Date(right.booking_date) - new Date(left.booking_date))
+      .slice(offset, offset + limit);
+
+    res.json({
+      data: combined,
+      pagination: { page, limit, total: totalResult.rows[0].total }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -188,6 +229,8 @@ export const updateBookingStatus = async (req, res) => {
   const { status } = req.body;
   const client = await pool.connect();
   try {
+    await client.query('BEGIN');
+
     const bookingQuery = await client.query(`
       SELECT b.*,
              c.user_id as customer_uid,
@@ -196,14 +239,14 @@ export const updateBookingStatus = async (req, res) => {
       JOIN Customers c ON b.customer_id = c.id
       LEFT JOIN Workers w ON b.worker_id = w.id
       WHERE b.id = $1
+      FOR UPDATE
     `, [id]);
     
     if (bookingQuery.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Binding matrix absent.' });
     }
     const booking = bookingQuery.rows[0];
-
-    await client.query('BEGIN');
 
     if (status === 'Accepted') {
       if (req.user.role !== 'Worker') {
@@ -219,15 +262,31 @@ export const updateBookingStatus = async (req, res) => {
         return res.status(400).json({ error: 'Only pending requests can be accepted.' });
       }
 
-      const workerRes = await client.query('SELECT id, category FROM workers WHERE user_id = $1', [req.user.id]);
+      const workerRes = await client.query(
+        'SELECT id, category, verification_status FROM workers WHERE user_id = $1',
+        [req.user.id]
+      );
       if (workerRes.rows.length === 0) {
         await client.query('ROLLBACK');
         return res.status(404).json({ error: 'Worker profile missing.' });
       }
       const worker = workerRes.rows[0];
+      if (worker.verification_status !== 'Verified') {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Only verified workers can accept jobs.' });
+      }
       if (booking.requested_category && booking.requested_category !== worker.category) {
         await client.query('ROLLBACK');
         return res.status(403).json({ error: 'Category mismatch for this request.' });
+      }
+
+      const alertCheck = await client.query(
+        'SELECT id FROM worker_alerts WHERE booking_id = $1 AND worker_id = $2 AND is_active = TRUE',
+        [id, worker.id]
+      );
+      if (alertCheck.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'This request is not currently active in your queue.' });
       }
 
       const conflictCheck = await client.query(`
@@ -248,6 +307,34 @@ export const updateBookingStatus = async (req, res) => {
       return res.json({ message: 'You are assigned to this booking now.' });
     }
 
+    if (status === 'Declined') {
+      if (req.user.role !== 'Worker') {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'Only workers can decline job requests.' });
+      }
+      if (booking.worker_id || booking.status !== 'Pending') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Only pending unassigned requests can be declined.' });
+      }
+
+      const workerRes = await client.query('SELECT id FROM workers WHERE user_id = $1', [req.user.id]);
+      if (workerRes.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Worker profile missing.' });
+      }
+
+      const declineResult = await client.query(
+        'UPDATE worker_alerts SET is_active = FALSE, status = $1 WHERE booking_id = $2 AND worker_id = $3',
+        ['Declined', id, workerRes.rows[0].id]
+      );
+      if (declineResult.rowCount === 0) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'This request is not currently active in your queue.' });
+      }
+      await client.query('COMMIT');
+      return res.json({ message: 'Request declined. It has been removed from your queue.' });
+    }
+
     if (booking.assigned_worker_uid !== req.user.id && booking.customer_uid !== req.user.id) {
       await client.query('ROLLBACK');
       return res.status(403).json({ error: 'You are not authorized for this booking.' });
@@ -258,10 +345,26 @@ export const updateBookingStatus = async (req, res) => {
       return res.status(400).json({ error: 'Unsupported status transition.' });
     }
 
-    const updateQuery = status === 'Completed'
-      ? 'UPDATE Bookings SET status = $1, end_time = NOW() WHERE id = $2'
-      : 'UPDATE Bookings SET status = $1 WHERE id = $2';
-    await client.query(updateQuery, [status, id]);
+    let trustChange = 0;
+
+    if (status === 'Cancelled') {
+      if (req.user.role === 'Customer' && !['Pending', 'Accepted'].includes(booking.status)) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Only active bookings can be cancelled.' });
+      }
+
+      await client.query('UPDATE Bookings SET status = $1 WHERE id = $2', [status, id]);
+      await client.query('UPDATE worker_alerts SET is_active = FALSE, status = $1 WHERE booking_id = $2', ['Read', id]);
+      await client.query('COMMIT');
+      return res.json({ message: 'Booking cancelled successfully.' });
+    }
+
+    if (booking.status !== 'Accepted') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Only accepted jobs can be marked as completed.' });
+    }
+
+    await client.query('UPDATE Bookings SET status = $1, end_time = NOW() WHERE id = $2', [status, id]);
 
     if (status === 'Completed') {
       const bookingRes = await client.query(`
@@ -286,7 +389,7 @@ export const updateBookingStatus = async (req, res) => {
         const totalCompleted = parseInt(totalCompletedRes.rows[0].count) || 0;
         const completionRate = (totalCompleted / totalAccepted) * 100;
 
-        const trustChange = (completionRate >= 90) ? 5 : (completionRate > 50 ? 1 : -5);
+        trustChange = (completionRate >= 90) ? 5 : (completionRate > 50 ? 1 : -5);
         
         await client.query(`
           UPDATE Workers 
@@ -294,12 +397,13 @@ export const updateBookingStatus = async (req, res) => {
           WHERE id = $4
         `, [totalCompleted, completionRate, trustChange, booking.worker_id]);
       }
-    } else if (status === 'Cancelled') {
-      await client.query('UPDATE worker_alerts SET is_active = FALSE, status = $1 WHERE booking_id = $2', ['Read', id]);
     }
 
     await client.query('COMMIT');
-    res.json({ message: 'Booking status updated successfully via atomic transaction' });
+    res.json({
+      message: 'Booking status updated successfully via atomic transaction',
+      trustChange
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     res.status(500).json({ error: err.message });
