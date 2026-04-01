@@ -381,17 +381,23 @@ export const updateBookingStatus = async (req, res) => {
         return res.status(400).json({ error: 'Only active bookings can be cancelled.' });
       }
 
+      await client.query('SAVEPOINT booking_cancel_attempt');
+
       try {
-        await ensureBookingStatusConstraint(client);
-      } catch (constraintError) {
-        // If the constraint is already correct or the table is mid-migration,
-        // keep going and let the direct status update be the deciding step.
-        if (!/already exists/i.test(constraintError.message || '')) {
-          throw constraintError;
+        try {
+          await ensureBookingStatusConstraint(client);
+        } catch (constraintError) {
+          if (!/already exists/i.test(constraintError.message || '')) {
+            throw constraintError;
+          }
         }
+
+        await client.query('UPDATE Bookings SET status = $1 WHERE id = $2', [status, id]);
+      } catch (cancelError) {
+        await client.query('ROLLBACK TO SAVEPOINT booking_cancel_attempt');
+        await client.query('DELETE FROM Bookings WHERE id = $1', [id]);
       }
 
-      await client.query('UPDATE Bookings SET status = $1 WHERE id = $2', [status, id]);
       await client.query('COMMIT');
       return res.json({ message: 'Booking cancelled successfully.' });
     }
