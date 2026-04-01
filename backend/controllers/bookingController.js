@@ -27,9 +27,10 @@ const deactivateWorkerAlerts = async (client, bookingId, workerId = null) => {
       params
     );
   } catch (error) {
-    // Older databases may not yet have the is_active column; in that case, leaving
-    // alerts untouched is safer than breaking core booking actions.
-    if (!/column .*is_active/i.test(error.message || '')) {
+    // Older databases may not yet have the newer worker_alerts columns used for
+    // linked booking alerts. In that case, leaving alerts untouched is safer than
+    // breaking core booking actions like accept/cancel/decline.
+    if (!/column .*is_active/i.test(error.message || '') && !/column .*booking_id/i.test(error.message || '')) {
       throw error;
     }
   }
