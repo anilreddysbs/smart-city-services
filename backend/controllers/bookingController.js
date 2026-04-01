@@ -339,7 +339,6 @@ export const updateBookingStatus = async (req, res) => {
          WHERE worker_id = $1
            AND id != $4
            AND status IN ('Pending', 'Accepted')
-           AND is_deleted = false
            AND (start_time < $3 AND end_time > $2)`,
         [worker.id, booking.start_time, booking.end_time, id]
       );
