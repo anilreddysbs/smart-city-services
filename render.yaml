@@ -17,6 +17,8 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      - key: FRONTEND_ORIGIN
+        value: "https://smart-city-services.onrender.com"
 
   # Dedicated Admin Management Hub
   - type: web
@@ -36,6 +38,8 @@ services:
           property: connectionString
       - key: JWT_SECRET
         generateValue: true
+      - key: FRONTEND_ORIGIN
+        value: "https://smart-city-admin.onrender.com"
 
 databases:
   - name: smart-city-db
