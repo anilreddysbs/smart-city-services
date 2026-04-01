@@ -223,7 +223,12 @@ function Register() {
           </div>
 
           <button type="submit" disabled={loading} className="btn" style={{ height: '52px', marginTop: '0.5rem' }}>
-            {loading ? 'Creating account...' : 'Create My Account'}
+            {loading ? (
+              <>
+                <span className="loading-spinner" />
+                <span>Creating account...</span>
+              </>
+            ) : 'Create My Account'}
           </button>
         </form>
 

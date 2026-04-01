@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { FaEye, FaEyeSlash, FaLock, FaEnvelope } from 'react-icons/fa';
 import api from '../services/api';
@@ -9,14 +9,30 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [slowHint, setSlowHint] = useState('');
   const navigate = useNavigate();
+  const slowHintTimerRef = useRef(null);
 
   const isAdminPortal = import.meta.env.VITE_ADMIN_PORTAL === 'true';
+
+  useEffect(() => {
+    return () => {
+      if (slowHintTimerRef.current) {
+        window.clearTimeout(slowHintTimerRef.current);
+      }
+    };
+  }, []);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSlowHint('');
+
+    slowHintTimerRef.current = window.setTimeout(() => {
+      setSlowHint('Still signing you in. The server may be waking up.');
+    }, 900);
+
     try {
       const res = await api.post('/auth/login', { email, password });
       localStorage.setItem('user', JSON.stringify(res.data.user));
@@ -28,15 +44,20 @@ function Login() {
           localStorage.removeItem('user');
           return;
         }
-        navigate('/dashboard/admin');
-      } else {
-        if (user.role === 'Admin') navigate('/dashboard/admin');
-        else if (user.role === 'Worker') navigate('/dashboard/worker');
-        else navigate('/dashboard/customer');
+        navigate('/dashboard/admin', { replace: true });
+        return;
       }
+
+      if (user.role === 'Admin') navigate('/dashboard/admin', { replace: true });
+      else if (user.role === 'Worker') navigate('/dashboard/worker', { replace: true });
+      else navigate('/dashboard/customer', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || err.response?.data?.message || 'Authentication sequence failed.');
     } finally {
+      if (slowHintTimerRef.current) {
+        window.clearTimeout(slowHintTimerRef.current);
+        slowHintTimerRef.current = null;
+      }
       setLoading(false);
     }
   };
@@ -44,7 +65,6 @@ function Login() {
   return (
     <div style={{ minHeight: 'calc(100vh - 72px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--background-alt)', padding: '2rem' }}>
       <div className="card" style={{ maxWidth: '420px', width: '100%', padding: '3rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
-        
         <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
           <h2 style={{ fontSize: '1.75rem', fontWeight: '900', color: 'var(--text)', marginBottom: '0.5rem' }}>
             {isAdminPortal ? 'Admin Intelligence' : 'Welcome to SmartCity'}
@@ -53,46 +73,77 @@ function Login() {
             {isAdminPortal ? 'Authenticate to access the orchestration layer' : 'Sign in to manage your professional services'}
           </p>
         </div>
-        
-        {error && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'center', fontSize: '0.85rem', border: '1px solid #f87171', fontWeight: '600' }}>{error}</div>}
-        
+
+        {error && (
+          <div style={{ background: '#fee2e2', color: '#dc2626', padding: '0.75rem', borderRadius: '8px', marginBottom: '1.5rem', textAlign: 'center', fontSize: '0.85rem', border: '1px solid #f87171', fontWeight: '600' }}>
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           <div className="form-group">
             <label>Email Address</label>
             <div style={{ position: 'relative' }}>
-               <FaEnvelope style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-               <input type="email" value={email} onChange={e => setEmail(e.target.value)} required style={{ paddingLeft: '2.8rem' }} placeholder="name@domain.com" />
+              <FaEnvelope style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={loading}
+                style={{ paddingLeft: '2.8rem' }}
+                placeholder="name@domain.com"
+              />
             </div>
           </div>
-          
+
           <div className="form-group" style={{ marginBottom: '1rem' }}>
             <label>Password</label>
             <div style={{ position: 'relative' }}>
               <FaLock style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-light)' }} />
-              <input type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required style={{ paddingLeft: '2.8rem', paddingRight: '3rem' }} placeholder="••••••••" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-light)', cursor: 'pointer' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                disabled={loading}
+                style={{ paddingLeft: '2.8rem', paddingRight: '3rem' }}
+                placeholder="........"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
+                style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: 'none', color: 'var(--text-light)', cursor: loading ? 'not-allowed' : 'pointer' }}
+              >
                 {showPassword ? <FaEyeSlash size={16} /> : <FaEye size={16} />}
               </button>
             </div>
           </div>
 
           <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
-             <Link to="/forgot-password" style={{ color: 'var(--secondary)', fontWeight: '700', fontSize: '0.85rem' }}>Forgot password?</Link>
+            <Link to="/forgot-password" style={{ color: 'var(--secondary)', fontWeight: '700', fontSize: '0.85rem' }}>Forgot password?</Link>
           </div>
 
           <button type="submit" disabled={loading} className="btn" style={{ width: '100%', height: '52px' }}>
-            {loading ? 'Authenticating...' : isAdminPortal ? 'Access Terminal' : 'Sign In'}
+            {loading ? (
+              <>
+                <span className="loading-spinner" />
+                <span>Signing you in...</span>
+              </>
+            ) : isAdminPortal ? 'Access Terminal' : 'Sign In'}
           </button>
+          <div className="auth-status-note">{loading ? slowHint || 'Checking your account details...' : ' '}</div>
         </form>
 
         <div style={{ marginTop: '2.5rem', textAlign: 'center', borderTop: '1px solid var(--border-light)', paddingTop: '2rem' }}>
-           <p style={{ fontSize: '0.95rem', color: 'var(--text-light)', marginBottom: isAdminPortal ? '1.5rem' : '0' }}>
-             {!isAdminPortal ? (
-               <>New to SmartCity? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: '800' }}>Join Free</Link></>
-             ) : (
-               <span style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>Protected Administrative Entry Node</span>
-             )}
-           </p>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-light)', marginBottom: isAdminPortal ? '1.5rem' : '0' }}>
+            {!isAdminPortal ? (
+              <>New to SmartCity? <Link to="/register" style={{ color: 'var(--primary)', fontWeight: '800' }}>Join Free</Link></>
+            ) : (
+              <span style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>Protected Administrative Entry Node</span>
+            )}
+          </p>
         </div>
       </div>
     </div>

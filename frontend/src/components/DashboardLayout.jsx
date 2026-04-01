@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FaBriefcase, FaCalendarAlt, FaChartBar, FaIdCard, FaSignOutAlt, FaUserCheck, FaUserShield } from 'react-icons/fa';
 import api from '../services/api';
@@ -8,6 +8,7 @@ function DashboardLayout({ children }) {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const location = useLocation();
   const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const isActive = (path) => (location.pathname === path ? 'active' : '');
 
@@ -29,10 +30,12 @@ function DashboardLayout({ children }) {
     return 'Signed-in workspace';
   })();
 
-  const handleLogout = () => {
-    api.post('/auth/logout').catch(() => null);
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    await api.post('/auth/logout').catch(() => null);
     localStorage.removeItem('user');
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   return (
@@ -101,8 +104,9 @@ function DashboardLayout({ children }) {
                 <span className="dashboard-user-name">{user?.name || 'User'}</span>
                 <span className="dashboard-user-role">{user?.role || 'Member'}</span>
               </div>
-              <button type="button" className="dashboard-logout" onClick={handleLogout}>
-                <FaSignOutAlt /> Sign Out
+              <button type="button" className="dashboard-logout" onClick={handleLogout} disabled={isLoggingOut}>
+                {isLoggingOut ? <span className="loading-spinner dark" /> : <FaSignOutAlt />}
+                {isLoggingOut ? 'Signing Out...' : 'Sign Out'}
               </button>
             </div>
           </header>

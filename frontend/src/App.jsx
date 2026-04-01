@@ -23,7 +23,20 @@ import ForgotPassword from './pages/ForgotPassword';
 import Community from './pages/Community';
 import GoogleTranslateManager from './components/GoogleTranslateManager';
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30 * 1000,
+      gcTime: 5 * 60 * 1000,
+      retry: 1,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      retry: 0,
+    },
+  },
+});
 
 const OptionalDashboardLayout = ({ children }) => {
   const user = JSON.parse(localStorage.getItem('user') || 'null');
