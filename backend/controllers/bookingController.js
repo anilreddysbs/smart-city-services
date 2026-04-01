@@ -422,60 +422,67 @@ export const updateBookingStatus = async (req, res) => {
       [status, id]
     );
 
-    const bookingRes = await client.query(
-      `SELECT b.*, w.category as service_type
-       FROM Bookings b
-       JOIN Workers w ON b.worker_id = w.id
-       WHERE b.id = $1`,
-      [id]
-    );
-    const bookingData = bookingRes.rows[0];
+    await client.query('SAVEPOINT completion_side_effects');
 
-    if (bookingData) {
-      await client.query(
-        `INSERT INTO job_history (worker_id, booking_id, service_type)
-         VALUES ($1, $2, $3)
-         ON CONFLICT DO NOTHING`,
-        [bookingData.worker_id, id, bookingData.service_type]
+    try {
+      const bookingRes = await client.query(
+        `SELECT b.*, w.category as service_type
+         FROM Bookings b
+         JOIN Workers w ON b.worker_id = w.id
+         WHERE b.id = $1`,
+        [id]
       );
+      const bookingData = bookingRes.rows[0];
 
-      let finalizedPrice = bookingData.total_price;
-      if (!finalizedPrice || parseFloat(finalizedPrice) <= 0) {
-        const start = new Date(bookingData.start_time);
-        const end = new Date(bookingData.end_time);
-        const duration = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
-        const rate = serviceRates[bookingData.service_type] || 100;
-        finalizedPrice = (duration * rate) + (bookingData.priority === 'Emergency' ? 600 : 0);
+      if (bookingData) {
+        await client.query(
+          `INSERT INTO job_history (worker_id, booking_id, service_type)
+           VALUES ($1, $2, $3)
+           ON CONFLICT DO NOTHING`,
+          [bookingData.worker_id, id, bookingData.service_type]
+        );
+
+        let finalizedPrice = bookingData.total_price;
+        if (!finalizedPrice || parseFloat(finalizedPrice) <= 0) {
+          const start = new Date(bookingData.start_time);
+          const end = new Date(bookingData.end_time);
+          const duration = Math.max(1, Math.ceil((end - start) / (1000 * 60 * 60)));
+          const rate = serviceRates[bookingData.service_type] || 100;
+          finalizedPrice = (duration * rate) + (bookingData.priority === 'Emergency' ? 600 : 0);
+        }
+
+        await client.query(
+          `INSERT INTO payments (booking_id, customer_id, worker_id, amount, status)
+           VALUES ($1, $2, $3, $4, 'Completed')
+           ON CONFLICT DO NOTHING`,
+          [id, bookingData.customer_id, bookingData.worker_id, finalizedPrice]
+        );
+
+        const totalAcceptedRes = await client.query(
+          `SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status != 'Pending'`,
+          [bookingData.worker_id]
+        );
+        const totalCompletedRes = await client.query(
+          `SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status = 'Completed'`,
+          [bookingData.worker_id]
+        );
+
+        const totalAccepted = parseInt(totalAcceptedRes.rows[0].count, 10) || 1;
+        const totalCompleted = parseInt(totalCompletedRes.rows[0].count, 10) || 0;
+        const completionRate = (totalCompleted / totalAccepted) * 100;
+
+        trustChange = completionRate >= 90 ? 5 : (completionRate > 50 ? 1 : -5);
+
+        await client.query(
+          `UPDATE Workers
+           SET total_jobs = $1, completion_rate = $2, trust_score = LEAST(trust_score + $3, 100)
+           WHERE id = $4`,
+          [totalCompleted, completionRate, trustChange, bookingData.worker_id]
+        );
       }
-
-      await client.query(
-        `INSERT INTO payments (booking_id, customer_id, worker_id, amount, status)
-         VALUES ($1, $2, $3, $4, 'Completed')
-         ON CONFLICT DO NOTHING`,
-        [id, bookingData.customer_id, bookingData.worker_id, finalizedPrice]
-      );
-
-      const totalAcceptedRes = await client.query(
-        `SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status != 'Pending'`,
-        [bookingData.worker_id]
-      );
-      const totalCompletedRes = await client.query(
-        `SELECT COUNT(*) as count FROM Bookings WHERE worker_id = $1 AND status = 'Completed'`,
-        [bookingData.worker_id]
-      );
-
-      const totalAccepted = parseInt(totalAcceptedRes.rows[0].count, 10) || 1;
-      const totalCompleted = parseInt(totalCompletedRes.rows[0].count, 10) || 0;
-      const completionRate = (totalCompleted / totalAccepted) * 100;
-
-      trustChange = completionRate >= 90 ? 5 : (completionRate > 50 ? 1 : -5);
-
-      await client.query(
-        `UPDATE Workers
-         SET total_jobs = $1, completion_rate = $2, trust_score = LEAST(trust_score + $3, 100)
-         WHERE id = $4`,
-        [totalCompleted, completionRate, trustChange, bookingData.worker_id]
-      );
+    } catch (sideEffectError) {
+      await client.query('ROLLBACK TO SAVEPOINT completion_side_effects');
+      trustChange = 0;
     }
 
     await client.query('COMMIT');
