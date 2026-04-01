@@ -28,8 +28,6 @@ function CustomerDashboard() {
   };
 
   const handleUpdateStatus = async (id, status) => {
-    if (status === 'Cancelled' && !window.confirm('Are you sure you want to cancel this service?')) return;
-
     setIsProcessing(true);
     try {
       await api.put(`/bookings/${id}/status`, { status });

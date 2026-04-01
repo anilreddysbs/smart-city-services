@@ -411,7 +411,16 @@ export const updateBookingStatus = async (req, res) => {
       return res.status(403).json({ error: 'Only the service professional can certify job completion and trigger payout.' });
     }
 
-    await client.query('UPDATE Bookings SET status = $1, end_time = NOW() WHERE id = $2', [status, id]);
+    await client.query(
+      `UPDATE Bookings
+       SET status = $1,
+           end_time = CASE
+             WHEN start_time IS NOT NULL AND NOW() <= start_time THEN start_time + INTERVAL '1 hour'
+             ELSE NOW()
+           END
+       WHERE id = $2`,
+      [status, id]
+    );
 
     const bookingRes = await client.query(
       `SELECT b.*, w.category as service_type
