@@ -334,19 +334,6 @@ export const updateBookingStatus = async (req, res) => {
         return res.status(403).json({ error: 'Category mismatch for this request.' });
       }
 
-      const conflictCheck = await client.query(
-        `SELECT 1 FROM bookings
-         WHERE worker_id = $1
-           AND id != $4
-           AND status IN ('Pending', 'Accepted')
-           AND (start_time < $3 AND end_time > $2)`,
-        [worker.id, booking.start_time, booking.end_time, id]
-      );
-      if (conflictCheck.rows.length > 0) {
-        await client.query('ROLLBACK');
-        return res.status(409).json({ error: 'You already have an overlapping assignment.' });
-      }
-
       await client.query('UPDATE bookings SET worker_id = $1, status = $2 WHERE id = $3', [worker.id, 'Accepted', id]);
       await client.query('COMMIT');
       return res.json({ message: 'You are assigned to this booking now.' });
