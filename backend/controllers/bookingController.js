@@ -286,10 +286,9 @@ export const updateBookingStatus = async (req, res) => {
     await client.query('BEGIN');
 
     const bookingQuery = await client.query(
-      `SELECT b.*, c.user_id as customer_uid, w.user_id as assigned_worker_uid
+      `SELECT b.*, c.user_id as customer_uid
        FROM Bookings b
        JOIN Customers c ON b.customer_id = c.id
-       LEFT JOIN Workers w ON b.worker_id = w.id
        WHERE b.id = $1
        FOR UPDATE`,
       [id]
@@ -359,7 +358,12 @@ export const updateBookingStatus = async (req, res) => {
       return res.json({ message: 'Request declined successfully.' });
     }
 
-    if (booking.assigned_worker_uid !== req.user.id && booking.customer_uid !== req.user.id) {
+    const assignedWorkerUidResult = booking.worker_id
+      ? await client.query('SELECT user_id FROM Workers WHERE id = $1', [booking.worker_id])
+      : { rows: [] };
+    const assignedWorkerUid = assignedWorkerUidResult.rows[0]?.user_id ?? null;
+
+    if (assignedWorkerUid !== req.user.id && booking.customer_uid !== req.user.id) {
       await client.query('ROLLBACK');
       return res.status(403).json({ error: 'You are not authorized for this booking.' });
     }
