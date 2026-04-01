@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import { toast } from 'react-toastify';
 
 function CommunitySubscriptionsPage() {
   const [subs, setSubs] = useState([]);
@@ -21,9 +22,9 @@ function CommunitySubscriptionsPage() {
     try {
       await api.post('/subscriptions/create', form);
       fetchSubs();
-      setForm({ ...form, community_name: '' });
-      alert('Subscription contract verified and integrated.');
-    } catch(err) { alert('Failed to initialize subscription'); }
+      setForm({ ...form, community_name: '', end_date: '' });
+      toast.success('Subscription created successfully.');
+    } catch(err) { toast.error(err.response?.data?.error || 'Failed to initialize subscription'); }
   }
 
   return (

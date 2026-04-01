@@ -1,7 +1,7 @@
 import pool from '../database.js';
 
 export const getWorkers = async (req, res, next) => {
-  const { category, lat, lng } = req.query;
+  const { category, lat, lng, search } = req.query;
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 50;
   const offset = (page - 1) * limit;
@@ -12,20 +12,26 @@ export const getWorkers = async (req, res, next) => {
              w.trust_score, w.total_jobs, w.completion_rate, w.latitude, w.longitude, w.user_id
       FROM Workers w 
       JOIN Users u ON w.user_id = u.id 
-      WHERE w.verification_status IN ('Verified', 'Pending') AND w.is_deleted = false
+      WHERE w.verification_status = 'Verified' AND w.is_deleted = false
     `;
     let countQuery = `
       SELECT COUNT(*) 
       FROM Workers w 
       JOIN Users u ON w.user_id = u.id 
-      WHERE w.verification_status IN ('Verified', 'Pending') AND w.is_deleted = false
+      WHERE w.verification_status = 'Verified' AND w.is_deleted = false
     `;
     const params = [];
 
     if (category) {
-      query += ' AND w.category = $1';
-      countQuery += ' AND w.category = $1';
+      query += ` AND w.category = $${params.length + 1}`;
+      countQuery += ` AND w.category = $${params.length + 1}`;
       params.push(category);
+    }
+
+    if (search) {
+      query += ` AND (u.name ILIKE $${params.length + 1} OR w.category ILIKE $${params.length + 1} OR w.location ILIKE $${params.length + 1})`;
+      countQuery += ` AND (u.name ILIKE $${params.length + 1} OR w.category ILIKE $${params.length + 1} OR w.location ILIKE $${params.length + 1})`;
+      params.push(`%${search.trim()}%`);
     }
     
     query += ` ORDER BY 
@@ -99,7 +105,7 @@ export const getWorkerById = async (req, res, next) => {
   try {
     const workersResult = await pool.query(`
       SELECT w.id, u.name, w.category, w.experience, w.location, w.verification_status,
-             w.trust_score, w.total_jobs, w.completion_rate, u.phone, u.email
+             w.trust_score, w.total_jobs, w.completion_rate
       FROM Workers w 
       JOIN Users u ON w.user_id = u.id 
       WHERE w.id = $1 AND w.is_deleted = false

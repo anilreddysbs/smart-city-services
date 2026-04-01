@@ -5,10 +5,20 @@ export const createRating = async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const bookRes = await client.query('SELECT status FROM Bookings WHERE id = $1', [booking_id]);
+    const bookRes = await client.query(`
+      SELECT b.status, c.user_id AS customer_user_id, b.worker_id
+      FROM Bookings b
+      JOIN Customers c ON b.customer_id = c.id
+      WHERE b.id = $1
+      FOR UPDATE
+    `, [booking_id]);
     if (bookRes.rows.length === 0 || bookRes.rows[0].status !== 'Completed') {
        await client.query('ROLLBACK');
        return res.status(400).json({ message: 'Can only submit ratings on specifically completed jobs' });
+    }
+    if (bookRes.rows[0].customer_user_id !== req.user.id) {
+      await client.query('ROLLBACK');
+      return res.status(403).json({ message: 'Only the customer for this booking can submit a rating.' });
     }
 
     await client.query(
@@ -18,9 +28,8 @@ export const createRating = async (req, res) => {
 
     await client.query('UPDATE job_history SET rating = $1 WHERE booking_id = $2', [rating, booking_id]);
 
-    const bookingRes = await client.query('SELECT worker_id FROM Bookings WHERE id = $1', [booking_id]);
-    if (bookingRes.rows.length > 0) {
-       const workerId = bookingRes.rows[0].worker_id;
+    if (bookRes.rows.length > 0) {
+       const workerId = bookRes.rows[0].worker_id;
        const ratingEffect = (rating >= 4) ? 2 : (rating === 3 ? 0 : -3);
        await client.query('UPDATE Workers SET trust_score = LEAST(trust_score + $1, 100) WHERE id = $2', [ratingEffect, workerId]);
     }

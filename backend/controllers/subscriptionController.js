@@ -5,6 +5,9 @@ export const createSubscription = async (req, res) => {
   try {
     const custRes = await pool.query('SELECT id FROM customers WHERE user_id = $1', [req.user.id]);
     const customerId = custRes.rows[0]?.id;
+    if (!customerId) {
+      return res.status(403).json({ error: 'Only customer accounts can create subscriptions.' });
+    }
 
     const result = await pool.query(`
       INSERT INTO community_subscriptions (community_name, service_category, subscription_type, start_date, end_date, customer_id)
@@ -20,6 +23,9 @@ export const getSubscriptions = async (req, res) => {
   try {
     const custRes = await pool.query('SELECT id FROM customers WHERE user_id = $1', [req.user.id]);
     const customerId = custRes.rows[0]?.id;
+    if (!customerId) {
+      return res.status(403).json({ error: 'Only customer accounts can view subscriptions.' });
+    }
 
     const result = await pool.query('SELECT * FROM community_subscriptions WHERE customer_id = $1 ORDER BY id DESC', [customerId]);
     res.json(result.rows);

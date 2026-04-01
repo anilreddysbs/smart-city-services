@@ -39,7 +39,7 @@ function CustomerDashboard() {
       }
       toast.success(`Service ${status.toLowerCase()} successfully.`);
     } catch (err) {
-      toast.error('Failed to update service status.');
+      toast.error(err.response?.data?.error || 'Failed to update service status.');
     } finally {
       setIsProcessing(false);
     }
