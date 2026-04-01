@@ -18,7 +18,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: FRONTEND_ORIGIN
-        value: "https://smart-city-services.onrender.com"
+        value: "https://smart-city-services-ag9z.onrender.com"
 
   # Dedicated Admin Management Hub
   - type: web
