@@ -4,6 +4,7 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
+    "schema:sync": "node schemaSync.js",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },

@@ -13,6 +13,7 @@ import alertRoutes from './routes/alertRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import performanceRoutes from './routes/performanceRoutes.js';
 import communityRoutes from './routes/communityRoutes.js';
+import { ensureSchema } from './schemaSync.js';
 import { errorHandler } from './middleware/errorMiddleware.js';
 
 dotenv.config();
@@ -72,6 +73,16 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+
+const startServer = async () => {
+  await ensureSchema();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer().catch((error) => {
+  console.error('Startup failed during schema sync:', error);
+  process.exit(1);
 });
