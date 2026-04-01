@@ -19,14 +19,12 @@ function Login() {
     setError('');
     try {
       const res = await api.post('/auth/login', { email, password });
-      localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
       const user = res.data.user;
 
       if (isAdminPortal) {
         if (user.role !== 'Admin') {
           setError('Access Denied: This portal is strictly for system administrators.');
-          localStorage.removeItem('token');
           localStorage.removeItem('user');
           return;
         }

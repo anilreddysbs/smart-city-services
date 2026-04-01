@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../database.js';
+import { clearAuthCookie, getJwtSecret, setAuthCookie } from '../utils/auth.js';
 
 export const register = async (req, res) => {
   const { name, email, phone, password, role, category, experience, location, latitude, longitude } = req.body;
@@ -66,14 +67,21 @@ export const login = async (req, res) => {
 
     const token = jwt.sign(
       { id: user.id, role: user.role, workerId, customerId },
-      process.env.JWT_SECRET || 'secret',
+      getJwtSecret(),
       { expiresIn: '1d' }
     );
 
-    res.json({ token, user: { id: user.id, name: user.name, role: user.role, workerId, customerId } });
+    setAuthCookie(res, token);
+
+    res.json({ user: { id: user.id, name: user.name, role: user.role, workerId, customerId } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+};
+
+export const logout = async (req, res) => {
+  clearAuthCookie(res);
+  res.json({ message: 'Logged out successfully.' });
 };
 
 export const getProfile = async (req, res) => {

@@ -26,25 +26,21 @@ import GoogleTranslateManager from './components/GoogleTranslateManager';
 const queryClient = new QueryClient();
 
 const OptionalDashboardLayout = ({ children }) => {
-  const token = localStorage.getItem('token');
-  return token ? <DashboardLayout>{children}</DashboardLayout> : children;
+  const user = JSON.parse(localStorage.getItem('user') || 'null');
+  return user ? <DashboardLayout>{children}</DashboardLayout> : children;
 };
 
 const PrivateRoute = ({ children, role }) => {
   const isAdminPortal = import.meta.env.VITE_ADMIN_PORTAL === 'true';
-  const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || 'null');
-  if (!token) return <Navigate to="/login" />;
-  // In admin portal: wrong role → back to login to avoid catch-all loop
+  if (!user) return <Navigate to="/login" />;
   if (role && user?.role !== role) return <Navigate to={isAdminPortal ? '/login' : '/'} />;
   return children;
 };
 
-// Smart guard for admin portal root: redirects logged-in admins to their dashboard
 const AdminPortalGuard = () => {
-  const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || 'null');
-  if (token && user?.role === 'Admin') return <Navigate to="/dashboard/admin" replace />;
+  if (user?.role === 'Admin') return <Navigate to="/dashboard/admin" replace />;
   return <Navigate to="/login" replace />;
 };
 
@@ -56,14 +52,11 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <Router>
           <Routes>
-            {/* If already logged in as admin, go straight to dashboard */}
             <Route path="/" element={<AdminPortalGuard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard/admin" element={<PrivateRoute role="Admin"><DashboardLayout><AdminDashboard /></DashboardLayout></PrivateRoute>} />
             <Route path="/dashboard/admin/analytics" element={<PrivateRoute role="Admin"><DashboardLayout><AnalyticsDashboard /></DashboardLayout></PrivateRoute>} />
-            {/* Profile page — needed so DashboardLayout sidebar link works */}
             <Route path="/profile" element={<PrivateRoute role="Admin"><DashboardLayout><ProfilePage /></DashboardLayout></PrivateRoute>} />
-            {/* Catch all unknown routes → login */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
           <ToastContainer position="bottom-right" autoClose={3000} theme="colored" />
@@ -84,15 +77,14 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/workers" element={<OptionalDashboardLayout><WorkerListing /></OptionalDashboardLayout>} />
-          <Route path="/book" element={<PrivateRoute><DashboardLayout><Booking /></DashboardLayout></PrivateRoute>} />
-          <Route path="/book/:workerId" element={<PrivateRoute><DashboardLayout><Booking /></DashboardLayout></PrivateRoute>} />
+          <Route path="/book" element={<PrivateRoute role="Customer"><DashboardLayout><Booking /></DashboardLayout></PrivateRoute>} />
+          <Route path="/book/:workerId" element={<PrivateRoute role="Customer"><DashboardLayout><Booking /></DashboardLayout></PrivateRoute>} />
           <Route path="/worker/:id" element={<OptionalDashboardLayout><WorkerProfile /></OptionalDashboardLayout>} />
           <Route path="/dashboard/customer" element={<PrivateRoute role="Customer"><DashboardLayout><CustomerDashboard /></DashboardLayout></PrivateRoute>} />
           <Route path="/dashboard/worker" element={<PrivateRoute role="Worker"><DashboardLayout><WorkerDashboard /></DashboardLayout></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><DashboardLayout><ProfilePage /></DashboardLayout></PrivateRoute>} />
           <Route path="/dashboard/worker/performance" element={<PrivateRoute role="Worker"><DashboardLayout><WorkerPerformanceDashboard /></DashboardLayout></PrivateRoute>} />
           <Route path="/dashboard/customer/subscriptions" element={<PrivateRoute role="Customer"><DashboardLayout><CommunitySubscriptionsPage /></DashboardLayout></PrivateRoute>} />
-          {/* Main portal doesn't show admin dashboard publicly */}
           <Route path="/dashboard/admin/*" element={<Navigate to="/login" />} />
         </Routes>
         <ToastContainer position="bottom-right" autoClose={3000} theme="colored" />

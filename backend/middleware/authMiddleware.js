@@ -1,23 +1,25 @@
 import jwt from 'jsonwebtoken';
+import { getJwtSecret, getTokenFromRequest } from '../utils/auth.js';
 
 export const authenticate = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = getTokenFromRequest(req);
   if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const decoded = jwt.verify(token, getJwtSecret());
     req.user = decoded;
     next();
   } catch (err) {
-    res.status(401).json({ message: 'Invalid Token' });
+    const status = err.message.includes('JWT_SECRET') ? 500 : 401;
+    res.status(status).json({ message: status === 500 ? 'Authentication is not configured correctly.' : 'Invalid Token' });
   }
 };
 
 export const optionalAuth = (req, res, next) => {
-  const token = req.headers.authorization?.split(' ')[1];
+  const token = getTokenFromRequest(req);
   if (!token) return next();
   try {
-    req.user = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    req.user = jwt.verify(token, getJwtSecret());
   } catch (err) {}
   next();
 };

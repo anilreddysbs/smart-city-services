@@ -12,7 +12,7 @@ function CustomerDashboard() {
   const { data = [], isLoading } = useQuery({
     queryKey: ['customerBookings'],
     queryFn: () => api.get('/bookings/customer').then(res => res.data.data ? res.data.data : res.data),
-    refetchInterval: 30000 
+    refetchInterval: 10000 
   });
 
   const activeBookings = data.filter(b => b.status === 'Pending' || b.status === 'Accepted');
@@ -89,7 +89,7 @@ function CustomerDashboard() {
                       <div style={{ fontWeight: '800', color: 'var(--primary)', marginTop: '0.25rem' }}>₹{b.total_price}</div>
                       {b.priority === 'Emergency' && (
                         <div style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: '800', marginTop: '0.35rem' }}>
-                          Emergency request (higher pricing)
+                          Emergency request (Rs. 500 priority surcharge)
                         </div>
                       )}
                     </div>

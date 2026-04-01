@@ -22,9 +22,23 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+const allowedOrigins = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
 // Explicitly map authentic IPs traversing Render TCP load balancers globally
 app.set('trust proxy', 1);
-app.use(cors());
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(new Error('CORS origin not allowed.'));
+  },
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
@@ -48,6 +62,10 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use((err, req, res, next) => {
   console.error(err.stack);
+  if (err.message === 'CORS origin not allowed.') {
+    return res.status(403).json({ message: err.message });
+  }
+
   res.status(500).json({ message: 'Internal Server Error' });
 });
 
