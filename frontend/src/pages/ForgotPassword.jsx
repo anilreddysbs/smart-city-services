@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { FaArrowLeft, FaEnvelope, FaShieldAlt } from 'react-icons/fa';
+import { FaArrowLeft, FaClock, FaEnvelope } from 'react-icons/fa';
 
 function ForgotPassword() {
   const containerStyle = {
@@ -11,6 +11,7 @@ function ForgotPassword() {
     background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
     padding: '2rem'
   };
+
   const cardStyle = {
     maxWidth: '520px',
     width: '100%',
@@ -25,24 +26,27 @@ function ForgotPassword() {
     <div style={containerStyle}>
       <div style={cardStyle}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ width: '64px', height: '64px', background: 'rgba(79, 70, 229, 0.1)', color: 'var(--primary)', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto', fontSize: '1.75rem' }}>
-            <FaShieldAlt />
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.35rem 0.8rem', borderRadius: '999px', background: '#ecfeff', color: '#0f766e', fontSize: '0.78rem', fontWeight: '800', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '1.25rem' }}>
+            <FaClock />
+            Coming Soon
           </div>
+
           <h2 style={{ fontSize: '2rem', fontWeight: '900', color: '#0f172a', marginBottom: '0.75rem' }}>
-            Password Recovery Not Yet Enabled
+            Password Reset Is Not Live Yet
           </h2>
+
           <p style={{ color: '#64748b', lineHeight: '1.6', fontSize: '1.02rem', fontWeight: '500' }}>
-            This project does not currently have a backend password reset workflow. To avoid implying a recovery path that is not real, this page is informational only for now.
+            This demo does not include a self-service password recovery flow yet. We are keeping this page simple instead of showing a fake reset experience.
           </p>
         </div>
 
         <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '1.25rem 1.5rem', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', color: '#0f172a', fontWeight: '800', marginBottom: '0.5rem' }}>
             <FaEnvelope />
-            Next recommended implementation
+            For now
           </div>
           <p style={{ margin: 0, color: '#475569', lineHeight: '1.6' }}>
-            Add a server-backed reset-token flow with expiry, rate limiting, and a dedicated reset form before enabling self-service password recovery in the UI.
+            Use your existing test credentials, or contact the project admin if you need account access reset while this feature is still being built.
           </p>
         </div>
 
