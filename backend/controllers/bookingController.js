@@ -15,6 +15,15 @@ const serviceRates = {
   'Maintenance Worker': 100
 };
 
+const ensureBookingStatusConstraint = async (client) => {
+  await client.query(`ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_status_check;`);
+  await client.query(`
+    ALTER TABLE bookings
+    ADD CONSTRAINT bookings_status_check
+    CHECK (status IN ('Pending', 'Accepted', 'Completed', 'Cancelled')) NOT VALID;
+  `);
+};
+
 const withComputedPrice = (booking) => {
   if (!booking.total_price || parseFloat(booking.total_price) <= 0) {
     const start = new Date(booking.start_time);
@@ -380,6 +389,16 @@ export const updateBookingStatus = async (req, res) => {
       if (req.user.role === 'Customer' && !['Pending', 'Accepted'].includes(booking.status)) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'Only active bookings can be cancelled.' });
+      }
+
+      try {
+        await ensureBookingStatusConstraint(client);
+      } catch (constraintError) {
+        // If the constraint is already correct or the table is mid-migration,
+        // keep going and let the direct status update be the deciding step.
+        if (!/already exists/i.test(constraintError.message || '')) {
+          throw constraintError;
+        }
       }
 
       await client.query('UPDATE Bookings SET status = $1 WHERE id = $2', [status, id]);
