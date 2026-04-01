@@ -27,9 +27,7 @@ const allowedOrigins = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
   .map((origin) => origin.trim())
   .filter(Boolean);
 
-// Explicitly map authentic IPs traversing Render TCP load balancers globally
-app.set('trust proxy', 1);
-app.use(cors({
+const apiCors = cors({
   origin(origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -38,8 +36,12 @@ app.use(cors({
     return callback(new Error('CORS origin not allowed.'));
   },
   credentials: true
-}));
+});
+
+// Explicitly map authentic IPs traversing Render TCP load balancers globally
+app.set('trust proxy', 1);
 app.use(express.json());
+app.use('/api', apiCors);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/workers', workerRoutes);
