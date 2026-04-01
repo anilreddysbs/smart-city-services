@@ -50,6 +50,7 @@ export const updateProfileSchema = Joi.object({
 
 export const createBookingSchema = Joi.object({
   service_id: Joi.number().integer().positive().allow(null),
+  worker_id: Joi.number().integer().positive().allow(null),
   requested_category: Joi.string().valid(...categories).required(),
   description: Joi.string().trim().min(10).max(2000).required(),
   start_time: Joi.date().iso().required(),

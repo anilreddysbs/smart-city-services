@@ -45,15 +45,19 @@ function Booking() {
 
   const handleSubmit = async () => {
     try {
+      const computedStartTime = new Date(form.start_time).toISOString();
+      const computedEndTime = new Date(new Date(form.start_time).getTime() + (1000 * 60 * 60)).toISOString();
+
       const result = await api.post('/bookings', {
         requested_category: worker?.category || selectedCategory,
         description: form.description,
-        start_time: form.start_time,
+        start_time: computedStartTime,
+        end_time: computedEndTime,
         priority: form.priority,
         customer_location: form.customer_location,
         customer_latitude: form.customer_latitude,
         customer_longitude: form.customer_longitude,
-        worker_id: workerId || null
+        worker_id: workerId ? Number(workerId) : null
       });
 
       const alertedWorkers = result.data?.alerted_workers || 0;
