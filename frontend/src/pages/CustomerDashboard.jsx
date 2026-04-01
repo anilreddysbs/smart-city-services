@@ -102,7 +102,7 @@ function CustomerDashboard() {
                       <div style={{ fontWeight: '800', color: 'var(--primary)', marginTop: '0.25rem' }}>Rs. {booking.total_price}</div>
                       {booking.priority === 'Emergency' && (
                         <div style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: '800', marginTop: '0.35rem' }}>
-                          Emergency request (Rs. 500 priority surcharge)
+                          Emergency request (Rs. 600 priority surcharge)
                         </div>
                       )}
                     </div>

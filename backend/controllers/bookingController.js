@@ -34,6 +34,7 @@ export const createBooking = async (req, res) => {
     requested_category,
     description,
     start_time,
+    end_time,
     priority = 'Normal',
     customer_location = '',
     customer_latitude = null,
@@ -46,15 +47,23 @@ export const createBooking = async (req, res) => {
     await client.query('BEGIN');
 
     const start = new Date(start_time);
+    const parsedEnd = end_time ? new Date(end_time) : null;
     const bufferDate = new Date();
     bufferDate.setHours(bufferDate.getHours() - 24);
+
+    if (Number.isNaN(start.getTime())) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ success: false, error: 'Start time is invalid.' });
+    }
 
     if (start < bufferDate) {
       await client.query('ROLLBACK');
       return res.status(400).json({ success: false, error: 'Booking cannot be placed historically in the past.' });
     }
 
-    const end = new Date(new Date(start).getTime() + (1000 * 60 * 60));
+    const end = parsedEnd && !Number.isNaN(parsedEnd.getTime()) && parsedEnd > start
+      ? parsedEnd
+      : new Date(new Date(start).getTime() + (1000 * 60 * 60));
 
     const categories = ['Electrician', 'Plumber', 'Painter', 'Construction Worker', 'Maintenance Worker'];
     if (!requested_category || !categories.includes(requested_category)) {

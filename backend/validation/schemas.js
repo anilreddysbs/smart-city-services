@@ -49,14 +49,14 @@ export const updateProfileSchema = Joi.object({
 }).required();
 
 export const createBookingSchema = Joi.object({
-  service_id: Joi.number().integer().positive().allow(null),
-  worker_id: Joi.number().integer().positive().allow(null),
+  service_id: Joi.number().integer().positive().allow(null, ''),
+  worker_id: Joi.number().integer().positive().allow(null, ''),
   requested_category: Joi.string().valid(...categories).required(),
-  description: Joi.string().trim().min(10).max(2000).required(),
-  start_time: Joi.date().iso().required(),
-  end_time: Joi.date().iso().required(),
+  description: Joi.string().trim().min(3).max(2000).required(),
+  start_time: Joi.date().required(),
+  end_time: Joi.date().allow(null, ''),
   priority: Joi.string().valid('Normal', 'Emergency').default('Normal'),
-  customer_location: Joi.string().trim().min(3).max(255).required(),
+  customer_location: Joi.string().trim().min(1).max(255).required(),
   customer_latitude: Joi.number().min(-90).max(90).allow(null),
   customer_longitude: Joi.number().min(-180).max(180).allow(null)
 }).required();
