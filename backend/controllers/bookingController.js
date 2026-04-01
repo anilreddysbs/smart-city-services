@@ -15,6 +15,26 @@ const serviceRates = {
   'Maintenance Worker': 100
 };
 
+const deactivateWorkerAlerts = async (client, bookingId, workerId = null) => {
+  const params = workerId ? [bookingId, workerId] : [bookingId];
+  const workerFilter = workerId ? ' AND worker_id = $2' : '';
+
+  try {
+    await client.query(
+      `UPDATE worker_alerts
+       SET is_active = FALSE
+       WHERE booking_id = $1${workerFilter}`,
+      params
+    );
+  } catch (error) {
+    // Older databases may not yet have the is_active column; in that case, leaving
+    // alerts untouched is safer than breaking core booking actions.
+    if (!/column .*is_active/i.test(error.message || '')) {
+      throw error;
+    }
+  }
+};
+
 const withComputedPrice = (booking) => {
   if (!booking.total_price || parseFloat(booking.total_price) <= 0) {
     const start = new Date(booking.start_time);
@@ -349,7 +369,7 @@ export const updateBookingStatus = async (req, res) => {
       }
 
       await client.query('UPDATE bookings SET worker_id = $1, status = $2 WHERE id = $3', [worker.id, 'Accepted', id]);
-      await client.query('UPDATE worker_alerts SET is_active = FALSE, status = $1 WHERE booking_id = $2', ['Read', id]);
+      await deactivateWorkerAlerts(client, id);
       await client.query('COMMIT');
       return res.json({ message: 'You are assigned to this booking now.' });
     }
@@ -370,14 +390,16 @@ export const updateBookingStatus = async (req, res) => {
         return res.status(404).json({ error: 'Worker profile missing.' });
       }
 
-      const declineResult = await client.query(
-        'UPDATE worker_alerts SET is_active = FALSE, status = $1 WHERE booking_id = $2 AND worker_id = $3',
-        ['Declined', id, workerRes.rows[0].id]
+      const alertCheck = await client.query(
+        'SELECT id FROM worker_alerts WHERE booking_id = $1 AND worker_id = $2',
+        [id, workerRes.rows[0].id]
       );
-      if (declineResult.rowCount === 0) {
+      if (alertCheck.rowCount === 0) {
         await client.query('ROLLBACK');
         return res.status(403).json({ error: 'This request is not currently active in your queue.' });
       }
+
+      await deactivateWorkerAlerts(client, id, workerRes.rows[0].id);
 
       await client.query('COMMIT');
       return res.json({ message: 'Request declined. It has been removed from your queue.' });
@@ -402,7 +424,7 @@ export const updateBookingStatus = async (req, res) => {
       }
 
       await client.query('UPDATE Bookings SET status = $1 WHERE id = $2', [status, id]);
-      await client.query('UPDATE worker_alerts SET is_active = FALSE, status = $1 WHERE booking_id = $2', ['Read', id]);
+      await deactivateWorkerAlerts(client, id);
       await client.query('COMMIT');
       return res.json({ message: 'Booking cancelled successfully.' });
     }
